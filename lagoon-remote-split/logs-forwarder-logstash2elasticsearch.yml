@@ -95,6 +95,11 @@ objects:
               value: ${CRONJOBS}
             - name: SERVICE_NAME
               value: ${SERVICE_NAME}
+            - name: LOGSDB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: LOGSDB_ADMIN_PASSWORD
+                  name: logs-db-admin-password
           resources:
             requests:
               cpu: 10m
