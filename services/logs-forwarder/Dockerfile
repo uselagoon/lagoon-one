@@ -25,7 +25,8 @@ ENV LOGS_FORWARDER_SHARED_KEY=secret \
     LOGS_FORWARDER_PRIVATE_KEY_PASSPHRASE=amazing1\
     LOGSDB_HOST=logs-db \
     LOGSDB_PORT=9200 \
-    LOGSDB_USERNAME=admin
+    LOGSDB_USERNAME=admin \
+    LOGSDB_SCHEME=http
 
 ENTRYPOINT ["/bin/entrypoint.sh"]
 CMD ["sh", "-c", "exec fluentd -c /fluentd/etc/${FLUENTD_CONF} -p /fluentd/plugins $FLUENTD_OPT"]

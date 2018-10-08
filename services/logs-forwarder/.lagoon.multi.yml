@@ -223,6 +223,7 @@ objects:
             type_name _doc
             user "#{ENV['LOGSDB_USERNAME']}"
             password "#{ENV['LOGSDB_PASSWORD']}"
+            scheme "#{ENV['LOGSDB_SCHEME']}"
           </match>
       </label>
     CONTAINER_LOGS_JSON: |-
