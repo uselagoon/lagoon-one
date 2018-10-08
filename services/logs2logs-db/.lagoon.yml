@@ -105,7 +105,7 @@ objects:
                 secretKeyRef:
                   key: RABBITMQ_PASSWORD
                   name: rabbitmq-password
-            - name: LOGSDB_ADMIN_PASSWORD
+            - name: LOGSDB_PASSWORD
               valueFrom:
                 secretKeyRef:
                   key: LOGSDB_ADMIN_PASSWORD

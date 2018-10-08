@@ -78,7 +78,7 @@ objects:
               port: 24284
             initialDelaySeconds: 120
           env:
-            - name: LOGSDB_ADMIN_PASSWORD
+            - name: LOGSDB_PASSWORD
               valueFrom:
                 secretKeyRef:
                   key: LOGSDB_ADMIN_PASSWORD
@@ -183,8 +183,8 @@ objects:
 
           <match **>
             @type elasticsearch
-            host logs-db
-            port 9200
+            host "#{ENV['LOGSDB_HOST']}"
+            port "#{ENV['LOGSDB_PORT']}"
             templates { "container-logs": "/fluentd/etc/container-logs.json"}
             template_overwrite true
             target_index_key index_name
@@ -204,8 +204,8 @@ objects:
             id_key viaq_msg_id
             remove_keys viaq_msg_id
             type_name _doc
-            user admin
-            password "#{ENV['LOGSDB_ADMIN_PASSWORD']}"
+            user "#{ENV['LOGSDB_USERNAME']}"
+            password "#{ENV['LOGSDB_PASSWORD']}"
           </match>
       </label>
     CONTAINER_LOGS_JSON: |-
