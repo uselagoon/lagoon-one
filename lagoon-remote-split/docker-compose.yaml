@@ -13,7 +13,7 @@ services:
       lagoon.template: logs-forwarder-logstash/.lagoon.yml
   logs-forwarder-logstash2elasticsearch:
     build:
-      context: .
+      context: logs-forwarder-logstash2elasticsearch
       dockerfile: Dockerfile.logs-forwarder-logstash2elasticsearch
     labels:
       lagoon.type: custom
