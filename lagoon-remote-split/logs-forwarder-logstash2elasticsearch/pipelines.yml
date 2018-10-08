@@ -1,2 +1,0 @@
-- pipeline.id: router-application-logs
-  path.config: "pipeline/router-application-logs.conf"

@@ -1,0 +1,23 @@
+FROM amazeeio/logstash
+
+RUN bin/logstash-plugin install logstash-input-lumberjack
+
+# Remove default shipped pipeline
+RUN rm -f pipeline/logstash.conf
+
+COPY logs-forwarder-logstash2elasticsearch/pipeline/router-application-logs.conf pipeline/router-application-logs.conf
+COPY logs-forwarder-logstash2elasticsearch/templates/application-logs.json templates/application-logs.json
+COPY logs-forwarder-logstash2elasticsearch/templates/router-logs.json templates/router-logs.json
+COPY logs-forwarder-logstash2elasticsearch/certs/ certs/
+
+RUN echo $'\n\
+- pipeline.id: router-application-logs\n\
+  path.config: "pipeline/router-application-logs.conf"' >> pipelines.yml
+
+# https://github.com/elastic/logstash-docker/issues/64
+ENV PATH_CONFIG=null
+
+ENV ELASTICSEARCH_URL="http://logs-db:9200" \
+    LOGSDB_PASSWORD=admin \
+    LOGSDB_USERNAME=admin
+
