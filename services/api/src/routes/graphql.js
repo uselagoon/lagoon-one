@@ -14,6 +14,7 @@ const graphqlRoute = graphql({
       message: error.message,
       locations: error.locations,
       path: error.path,
+      // stack: error.stack ? error.stack.split('\n') : [],
     };
   }
   ,
