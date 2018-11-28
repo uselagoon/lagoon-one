@@ -1,7 +1,10 @@
-# Redis
+# Redis (ephemeral)
 
 We recommend using Redis for internal caching. Add the redis
 service to `docker-compose.yaml`.
+`amazeeio/redis` is configured as [Last-recently-used cache](https://redis.io/topics/lru-cache) if the cache runs into the maximum memory usage.
+If you want to use Redis as a persistent storage please see below.
+
 
 ```
   redis:
@@ -14,8 +17,6 @@ service to `docker-compose.yaml`.
 ```
 
 Also, to configure redis, add the following to your `settings.php`.
-
-
 
 ### Drupal 7
 ```
@@ -79,9 +80,12 @@ if (getenv('LAGOON')){
 }
 ```
 
-### Persistent
+### Redis (persistent)
 
-Redis can also be configured as a persistent backend.
+Redis can also be configured to have the data persisted between deployments or restarts
+of the service. For example if you plan to use Redis as a data store.
+
+You can find the Redis configuration [here](FIXME: githublink)
 
 ```
 redis:
@@ -91,3 +95,14 @@ redis:
   environment:
     << : *default-environment
 ```
+
+
+## Environment Variables
+Environment variables are meant to do common behavior changes of php.
+
+| Environment Variable              | Default   | Description                                    |
+| --------------------------------- | --------- | ---------------------------------------------- |
+| `MAXMEMORY`                       | 100mb     | Maximum Memory Redis will use                  |
+| `MAXMEMORY_POLICY`                | FIXME:    | FIXME:                                         |
+| `LOGLEVEL`                        | notice    | Loglevel of the running Redis instance         |
+| `FLAVOR`                          | ephemeral | Mode on how redis runs: ephemeral, persistent  |
