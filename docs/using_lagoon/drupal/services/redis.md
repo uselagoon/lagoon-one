@@ -85,7 +85,7 @@ if (getenv('LAGOON')){
 Redis can also be configured to have the data persisted between deployments or restarts
 of the service. For example if you plan to use Redis as a data store.
 
-You can find the Redis configuration [here](FIXME: githublink)
+You can find the Redis configuration [here](https://github.com/amazeeio/lagoon/tree/master/images/redis/conf)
 
 ```
 redis:
@@ -103,6 +103,6 @@ Environment variables are meant to do common behavior changes of php.
 | Environment Variable              | Default   | Description                                    |
 | --------------------------------- | --------- | ---------------------------------------------- |
 | `MAXMEMORY`                       | 100mb     | Maximum Memory Redis will use                  |
-| `MAXMEMORY_POLICY`                | FIXME:    | FIXME:                                         |
+| `MAXMEMORY_POLICY`                | allkeys-lru | See https://redis.io/topics/lru-cache#eviction-policies |
 | `LOGLEVEL`                        | notice    | Loglevel of the running Redis instance         |
 | `FLAVOR`                          | ephemeral | Mode on how redis runs: ephemeral, persistent  |
