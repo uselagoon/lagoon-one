@@ -19,7 +19,7 @@ services:
       lagoon.type: custom
       lagoon.template: logs-forwarder.remote.yml # logs-forwarder in a remote openshift needs a special config
   logs-collector:
-    image: openshift/origin-logging-fluentd:v3.6.1
+    image: docker.io/openshift/origin-logging-fluentd:v3.6
     labels:
       lagoon.type: custom
       lagoon.rollout: daemonset

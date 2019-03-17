@@ -111,7 +111,7 @@ objects:
           envFrom:
           - configMapRef:
               name: lagoon-env
-          image: registry.access.redhat.com/openshift3/logging-fluentd:v3.6
+          image: docker.io/openshift/origin-logging-fluentd:v3.6
           name: ${SERVICE_NAME}
           resources:
             limits:
