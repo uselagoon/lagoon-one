@@ -81,6 +81,7 @@ This allows you to define the behaviour of the automatic creates routes (NOT the
 This setting allows you to enable injecting the deployed git SHA into your project as an environment variable. By default this is disabled, setting the value to `true` then sets the SHA as the environment variable `LAGOON_GIT_SHA`.
 
 ## Tasks
+[![Managing tasks in the Lagoon YML file](http://img.youtube.com/vi/Fr6rktLXuY4/0.jpg)](http://www.youtube.com/watch?v=Fr6rktLXuY4)
 
 There are different type of tasks you can define, they differ when exactly they are executed in a build flow:
 
