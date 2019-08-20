@@ -14,7 +14,11 @@ const usernameExistsRegex = /Username.*?exists/;
 (async () => {
   const allUsers = await gitlabApi.getAllUsers() as GitlabUser[];
 
+  logger.info(`Syncing ${allUsers.length} users`);
+
   for (const user of allUsers) {
+    logger.debug(`Processing ${user.email}`);
+
     let firstName = user.name,
       lastName;
     if (user.name.includes(' ')) {
@@ -32,7 +36,7 @@ const usernameExistsRegex = /Username.*?exists/;
         user.id,
       );
     } catch (err) {
-      if (!R.match(usernameExistsRegex, err.message)) {
+      if (!R.test(usernameExistsRegex, err.message)) {
         logger.error(`Could not sync (add) gitlab user ${user.email} id ${user.id}: ${err.message}`);
       } else {
         try {
@@ -52,4 +56,6 @@ const usernameExistsRegex = /Username.*?exists/;
       }
     }
   }
+
+  logger.info('Sync completed');
 })()
