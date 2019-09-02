@@ -14,6 +14,8 @@ RUN git ls-remote $LAGOON_GIT_SOURCE_REPOSITORY && rm -rf /home/.ssh/key
 COPY composer.json composer.lock /app/
 COPY scripts /app/scripts
 RUN composer install --no-dev
+RUN node --version
+RUN yarn --version
 COPY . /app
 
 ENV WEBROOT=web

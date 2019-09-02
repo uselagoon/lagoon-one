@@ -1,6 +1,8 @@
 ARG IMAGE_REPO
 FROM ${IMAGE_REPO:-amazeeio}/node:6-builder as builder
 COPY package.json yarn.lock /app/
+RUN node --version
+RUN yarn --version
 RUN yarn install
 
 FROM ${IMAGE_REPO:-amazeeio}/node:6
