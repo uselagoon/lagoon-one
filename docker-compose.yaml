@@ -391,3 +391,10 @@ services:
       lagoon.type: custom
       lagoon.template: services/logs-collector/.lagoon.yml
       lagoon.rollout: daemonset
+  develop:
+    types:
+      logs-db: elasticsearch-cluster
+    templates:
+      logs-db: services/logs-db/.lagoon.cluster.yml
+    rollouts:
+      logs-db: statefulset
