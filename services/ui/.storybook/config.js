@@ -2,6 +2,7 @@
 import config from './next.mock-config';
 import requireContext from 'require-context.macro';
 import { addDecorator, addParameters, configure } from '@storybook/react';
+import 'loki/configure-react';
 import { withA11y } from '@storybook/addon-a11y';
 import { withKnobs } from '@storybook/addon-knobs';
 import storySort from './storySort';
