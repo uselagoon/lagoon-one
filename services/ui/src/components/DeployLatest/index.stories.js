@@ -65,7 +65,9 @@ Unavailable.story = {
   },
 };
 
-export const Loading = () => '@TODO';
+export const Loading = () => (
+  <p>'@TODO'</p>
+);
 Loading.story = {
   parameters: {
     docs: {
@@ -74,7 +76,9 @@ Loading.story = {
   },
 };
 
-export const DeploySuccessful = () => '@TODO';
+export const DeploySuccessful = () => (
+  <p>'@TODO'</p>
+);
 DeploySuccessful.story = {
   parameters: {
     docs: {
@@ -83,7 +87,9 @@ DeploySuccessful.story = {
   },
 };
 
-export const Error = () => '@TODO';
+export const Error = () => (
+  <p>'@TODO'</p>
+);
 Error.story = {
   parameters: {
     docs: {

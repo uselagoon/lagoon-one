@@ -7,13 +7,12 @@ export default {
 }
 
 export const Default = () => (
-  <>@TODO: Doesn't work yet. subscribeToMore() causes browser to freeze.
-  {/*<Tasks*/}
-  {/*  router={{*/}
-  {/*    query: {*/}
-  {/*      openshiftProjectName: 'Example',*/}
-  {/*    },*/}
-  {/*  }}*/}
-  {/*/>*/}
-  </>
+  <p>@TODO: Doesn't work yet. subscribeToMore() causes browser to freeze.</p>
+  // <Tasks
+  //   router={{
+  //     query: {
+  //       openshiftProjectName: 'Example',
+  //     },
+  //   }}
+  // />
 );
