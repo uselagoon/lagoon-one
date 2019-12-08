@@ -1,4 +1,5 @@
 import React from 'react';
+import LinkTo from '@storybook/addon-links/react';
 import { PageEnvironment as Environment } from '../environment';
 
 export default {
@@ -18,11 +19,24 @@ export const Default = () => (
 );
 
 export const TODO = () => (
-  <p>
-    The <code>Environment</code> component shows an "Internal Server Error" the
-    first time it is loaded in StoryBook. Reload the page and it will appear
-    properly.
-  </p>
+  <>
+    <h4>Known bug:</h4>
+    <p>
+      If the
+      {' '}
+      <LinkTo
+        kind="Pages/Deployment"
+        story="Default"
+        className="hover-state"
+      >
+        <code>Deployment</code> page
+      </LinkTo>
+      {' '}
+      is viewed in Storybook before the <code>Environment</code> page, then
+      the <code>Environment</code> page shows an "Internal Server Error". Reload
+      the page and it will appear properly.
+    </p>
+  </>
 );
 TODO.story = {
   name: '@TODO',
