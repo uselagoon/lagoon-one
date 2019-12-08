@@ -14,6 +14,7 @@ addParameters({
     theme: lagoonTheme,
     showRoots: true,
     storySort: storySort({
+      method: 'alphabetical',
       order: ['Home', 'Pages', ['Projects', 'Project', 'Environment', 'Deployments', 'Deployment', 'Backups', 'Tasks', 'Task'], 'Components']
     }),
   },
