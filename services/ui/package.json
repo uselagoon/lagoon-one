@@ -13,8 +13,9 @@
     "build-storybook": "build-storybook -s ./src",
     "serve-storybook": "storybook-server -s ./src",
     "loki:setup": "loki update",
-    "loki:clean": "rm ./.loki/difference/* ./.loki/current/* ./.loki/report.*; true",
-    "loki:test": "yarn run loki:clean; loki test",
+    "loki:clean": "rm ./.loki/diff/* ./.loki/difference/* ./.loki/current/* ./.loki/report.*; true",
+    "loki:test": "yarn run loki:clean; loki test; yarn run loki:report",
+    "loki:report": "reg-cli ./.loki/current ./.loki/reference ./.loki/diff --extendedErrors --enableAntialias --report ./.loki/report.html --json ./.loki/report.json",
     "loki:approve": "loki approve",
     "loki:ci": "yarn run build-storybook && loki --requireReference --reactUri file:./storybook-static"
   },
@@ -67,6 +68,7 @@
     "loki": "^0.18.1",
     "prop-types": "^15.7.2",
     "react-is": "^16.12.0",
+    "reg-cli": "^0.15.13",
     "regenerator-runtime": "^0.13.3",
     "require-context.macro": "^1.2.2"
   },
