@@ -1,5 +1,5 @@
-import { MockList } from 'graphql-tools';
-import faker from 'faker/locale/en';
+const MockList = require('graphql-tools').MockList;
+const faker = require('faker/locale/en');
 
 // The mocks object is an Apollo Resolver Map where each mock function has the
 // following definition: (parent, args, context, info) => {}
@@ -11,7 +11,7 @@ import faker from 'faker/locale/en';
 //   Maybe split up tyepDefs, resolvers and mocks into folders per API concept?
 
 // Allow consumer to generate consistent results by seeding faker.
-export const seed = (value = 123) => faker.seed(value);
+const seed = (value = 123) => faker.seed(value);
 
 // Helper function for dates that should be clustered near each other.
 const addTime = (originalDate, hoursLimit) => {
@@ -541,4 +541,7 @@ mocks.Subscription = () => ({
   taskChanged: () => mocks.Task(),
 });
 
-export default mocks;
+module.exports = {
+  ...mocks,
+  seed,
+};
