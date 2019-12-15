@@ -20,6 +20,58 @@ addParameters({
   a11y: {
     restoreScroll: true,
   },
+  viewport: {
+    viewports: {
+      tiny: {
+        name: 'Small mobile',
+        styles: {
+          width: '450px',
+          height: '675px',
+        },
+        type: 'mobile',
+      },
+      xs: {
+        name: 'Large mobile',
+        styles: {
+          width: '600px',
+          height: '900px',
+        },
+        type: 'mobile',
+      },
+      tablet: {
+        name: 'Tablet',
+        styles: {
+          width: '768px',
+          height: '1024px',
+        },
+        type: 'tablet',
+      },
+      desktop: {
+        name: 'Desktop',
+        styles: {
+          width: '960px',
+          height: 'calc(100% - 20px)',
+        },
+        type: 'desktop',
+      },
+      wide: {
+        name: 'Wide desktop',
+        styles: {
+          width: '1200px',
+          height: 'calc(100% - 20px)',
+        },
+        type: 'desktop',
+      },
+      extraWide: {
+        name: 'Extra-wide desktop',
+        styles: {
+          width: '1400px',
+          height: 'calc(100% - 20px)',
+        },
+        type: 'desktop',
+      },
+    },
+  },
 });
 
 // Add global decorators.
