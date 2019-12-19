@@ -266,7 +266,11 @@ mocks.Environment = (parent, args = {}, context, info) => {
     deployments: [],
     backups: [],
     tasks: [],
-    services: [ mocks.EnvironmentService() ],
+    services: [
+      mocks.EnvironmentService(null, {name: 'cli'}),
+      mocks.EnvironmentService(null, {name: 'mariadb'}),
+      mocks.EnvironmentService(null, {name: 'nginx'}),
+    ],
   };
   environment.project.environments.push(environment);
   return {
@@ -306,9 +310,9 @@ mocks.EnvironmentHoursMonth = () => {
   };
 };
 
-mocks.EnvironmentService = () => ({
+mocks.EnvironmentService = (parent, args = {}, context, info) => ({
   id: faker.random.number(),
-  name: faker.random.arrayElement(['cli', 'nginx', 'mariadb']),
+  name: args.hasOwnProperty('name') ? args.name : faker.random.arrayElement(['cli', 'nginx', 'mariadb']),
 });
 
 mocks.Backup = (parent, args = {}, context, info) => {
