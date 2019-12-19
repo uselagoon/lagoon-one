@@ -18,7 +18,9 @@ addParameters({
     }),
   },
   a11y: {
-    restoreScroll: true,
+    options: {
+      restoreScroll: true,
+    },
   },
   viewport: {
     viewports: {
