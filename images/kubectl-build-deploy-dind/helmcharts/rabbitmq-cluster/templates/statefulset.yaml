@@ -1,0 +1,74 @@
+apiVersion: apps/v1beta1
+kind: StatefulSet
+metadata:
+  name: {{ include "rabbitmq-cluster.fullname" . }}
+spec:
+  serviceName: {{ include "rabbitmq-cluster.fullname" . }}-headless
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      service: {{ include "rabbitmq-cluster.fullname" . }}
+  template:
+    metadata:
+      labels:
+        branch: ${SAFE_BRANCH}
+        project: ${SAFE_PROJECT}
+        service: {{ include "rabbitmq-cluster.fullname" . }}
+    spec:
+      serviceAccountName: {{ include "rabbitmq-cluster.fullname" . }}-sa
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchExpressions:
+                  - key: service
+                    operator: In
+                    values:
+                      - {{ include "rabbitmq-cluster.fullname" . }}
+              topologyKey: kubernetes.io/hostname
+        priorityClassName: {{ include "rabbitmq-cluster.lagoon-priority" . }}
+      containers:
+      - name: {{ include "rabbitmq-cluster.fullname" . }}
+        command:
+          - sh
+        args:
+          - /cluster-rabbit.sh
+        image: {{ .Values.image }}
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 4369
+          protocol: TCP
+        - containerPort: 15672
+          protocol: TCP
+        - containerPort: 5672
+          protocol: TCP
+        readinessProbe:
+          tcpSocket:
+            port: 5672
+          initialDelaySeconds: 15
+          timeoutSeconds: 1
+        volumeMounts:
+          - name: {{ include "rabbitmq-cluster.fullname" . }}
+            mountPath: /var/lib/rabbitmq
+        env:
+          - name: RABBITMQ_USE_LONGNAME
+            value: "true"
+          - name: POD_NAMESPACE
+            valueFrom:
+              fieldRef:
+                apiVersion: v1
+                fieldPath: metadata.namespace
+          - name: SERVICE_NAME
+            value: {{ include "rabbitmq-cluster.fullname" . }}
+          - name: CRONJOBS
+            value: {{ .Values.cronjobs | quote }}
+  volumeClaimTemplates:
+  - metadata:
+      name: {{ include "rabbitmq-cluster.fullname" . }}
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 5Gi
+  updateStrategy:
+    type: RollingUpdate

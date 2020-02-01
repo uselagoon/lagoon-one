@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: Service
+metadata:
+  creationTimestamp: null
+labels:
+  {{- include "rabbitmq-cluster.labels" . | nindent 4 }}
+name: {{ include "rabbitmq-cluster.fullname" . }}-headless
+spec:
+  clusterIP: None
+  ports:
+  - name: 15672-tcp
+    port: {{ .Values.service.httpApi.port }}
+    targetPort: {{ .Values.service.httpApi.port }}
+    protocol: TCP
+  - name: 5672-tcp
+    port: {{ .Values.service.amqp.port }}
+    targetPort: {{ .Values.service.amqp.port }}
+    protocol: TCP
+  selector:
+    service: {{ include "rabbitmq-cluster.fullname" . }}
+status:
+  loadBalancer: {}

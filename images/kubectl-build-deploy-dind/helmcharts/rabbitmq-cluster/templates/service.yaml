@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "rabbitmq-cluster.fullname" . }}
+  labels:
+    {{- include "rabbitmq-cluster.labels" . | nindent 4 }}
+spec:
+  ports:
+    - port: {{ .Values.service.httpApi.port }}
+      targetPort: {{ .Values.service.httpApi.port }}
+      protocol: TCP
+      name: tcp-15672
+    - port: {{ .Values.service.amqp.port }}
+      targetPort: {{ .Values.service.amqp.port }}
+      protocol: TCP
+      name: tcp-5672
+  selector:
+    {{- include "rabbitmq-cluster.selectorLabels" . | nindent 4 }}

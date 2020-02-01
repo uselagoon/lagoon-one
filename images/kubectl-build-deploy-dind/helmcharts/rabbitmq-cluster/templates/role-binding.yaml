@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: RoleBinding
+metadata:
+  name: {{ include "rabbitmq-cluster.fullname" . }}-view
+roleRef:
+  kind: Role
+  name: view
+subjects:
+- kind: ServiceAccount
+  name: {{ include "rabbitmq-cluster.fullname" . }}-sa
