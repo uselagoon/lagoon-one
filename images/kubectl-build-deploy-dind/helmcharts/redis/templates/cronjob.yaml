@@ -4,9 +4,9 @@ kind: CronJob
 metadata:
   name: cronjob-{{ $.Release.Name }}-{{ $cronjobName }}
   labels:
-    {{- include "node-persistent.labels" $ | nindent 4 }}
+    {{- include "redis.labels" $ | nindent 4 }}
   annotations:
-    {{- include "node-persistent.annotations" $ | nindent 4 }}
+    {{- include "redis.annotations" $ | nindent 4 }}
 spec:
   schedule: {{ $cronjobConfig.schedule | quote }}
   concurrencyPolicy: Forbid
@@ -15,23 +15,23 @@ spec:
   jobTemplate:
     metadata:
       labels:
-        {{- include "node-persistent.labels" $ | nindent 8 }}
+        {{- include "redis.labels" $ | nindent 8 }}
       annotations:
-        {{- include "node-persistent.annotations" $ | nindent 8 }}
+        {{- include "redis.annotations" $ | nindent 8 }}
     spec:
       backoffLimit: 0
       template:
         metadata:
           labels:
-            {{- include "node-persistent.labels" $ | nindent 12 }}
+            {{- include "redis.labels" $ | nindent 12 }}
           annotations:
-            {{- include "node-persistent.annotations" $ | nindent 12 }}
+            {{- include "redis.annotations" $ | nindent 12 }}
         spec:
         {{- with $.Values.imagePullSecrets }}
           imagePullSecrets:
             {{- toYaml . | nindent 12 }}
         {{- end }}
-          priorityClassName: {{ include "node-persistent.lagoonPriority" . }}
+          priorityClassName: {{ include "redis.lagoonPriority" . }}
           enableServiceLinks: false
           securityContext:
             {{- toYaml $.Values.podSecurityContext | nindent 12 }}

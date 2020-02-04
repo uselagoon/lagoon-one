@@ -89,7 +89,7 @@ do
       SERVICE_TYPE="mariadb-single"
     # heck if this cluster supports the default one, if not we assume that this cluster is not capable of shared mariadbs and we use a mariadb-single
     # real basic check to see if the mariadbconsumer exists as a kind
-    elif kubectl --insecure-skip-tls-verify -n ${NAMESPACE} get mariadbconsumer.v1.mariadb.amazee.io &> /dev/null; then
+    elif kubectl --insecure-skip-tls-verify -n ${NAMESPACE} auth can-i create mariadbconsumer.v1.mariadb.amazee.io > /dev/null; then
       SERVICE_TYPE="mariadb-shared"
     else
       SERVICE_TYPE="mariadb-single"
@@ -108,7 +108,7 @@ do
     fi
 
     # check if the defined operator class exists
-    if kubectl --insecure-skip-tls-verify -n ${NAMESPACE} get mariadbconsumer.v1.mariadb.amazee.io &> /dev/null; then
+    if kubectl --insecure-skip-tls-verify -n ${NAMESPACE} auth can-i create mariadbconsumer.v1.mariadb.amazee.io > /dev/null; then
       SERVICE_TYPE="mariadb-shared"
       MAP_SERVICE_NAME_TO_SERVICEBROKER_CLASS["${SERVICE_NAME}"]="${MARIADB_SHARED_CLASS}"
     else
@@ -192,7 +192,7 @@ done
 ##############################################
 
 # we only need to build images for pullrequests and branches, but not during a TUG build
-if [[ ( "$TYPE" == "pullrequest"  ||  "$TYPE" == "branch" ) && ! $THIS_IS_TUG == "true" ]]; then
+if [[ ( "$BUILD_TYPE" == "pullrequest"  ||  "$BUILD_TYPE" == "branch" ) && ! $THIS_IS_TUG == "true" ]]; then
 
   BUILD_ARGS=()
 
@@ -205,22 +205,28 @@ if [[ ( "$TYPE" == "pullrequest"  ||  "$TYPE" == "branch" ) && ! $THIS_IS_TUG ==
   fi
 
   BUILD_ARGS+=(--build-arg IMAGE_REPO="${CI_OVERRIDE_IMAGE_REPO}")
-  BUILD_ARGS+=(--build-arg LAGOON_GIT_SHA="${LAGOON_GIT_SHA}")
-  BUILD_ARGS+=(--build-arg LAGOON_GIT_BRANCH="${BRANCH}")
   BUILD_ARGS+=(--build-arg LAGOON_PROJECT="${PROJECT}")
-  BUILD_ARGS+=(--build-arg LAGOON_BUILD_TYPE="${TYPE}")
+  BUILD_ARGS+=(--build-arg LAGOON_ENVIRONMENT="${ENVIRONMENT}")
+  BUILD_ARGS+=(--build-arg LAGOON_BUILD_TYPE="${BUILD_TYPE}")
+  BUILD_ARGS+=(--build-arg LAGOON_GIT_SOURCE_REPOSITORY="${SOURCE_REPOSITORY}")
+
   set +x
   BUILD_ARGS+=(--build-arg LAGOON_SSH_PRIVATE_KEY="${SSH_PRIVATE_KEY}")
   set -x
-  BUILD_ARGS+=(--build-arg LAGOON_GIT_SOURCE_REPOSITORY="${SOURCE_REPOSITORY}")
+
+  if [ "$BUILD_TYPE" == "branch" ]; then
+    BUILD_ARGS+=(--build-arg LAGOON_GIT_SHA="${LAGOON_GIT_SHA}")
+    BUILD_ARGS+=(--build-arg LAGOON_GIT_BRANCH="${BRANCH}")
+  fi
 
 
-  if [ "$TYPE" == "pullrequest" ]; then
+  if [ "$BUILD_TYPE" == "pullrequest" ]; then
     BUILD_ARGS+=(--build-arg LAGOON_PR_HEAD_BRANCH="${PR_HEAD_BRANCH}")
     BUILD_ARGS+=(--build-arg LAGOON_PR_HEAD_SHA="${PR_HEAD_SHA}")
     BUILD_ARGS+=(--build-arg LAGOON_PR_BASE_BRANCH="${PR_BASE_BRANCH}")
     BUILD_ARGS+=(--build-arg LAGOON_PR_BASE_SHA="${PR_BASE_SHA}")
     BUILD_ARGS+=(--build-arg LAGOON_PR_TITLE="${PR_TITLE}")
+    BUILD_ARGS+=(--build-arg LAGOON_PR_NUMBER="${PR_NUMBER}")
   fi
 
   for IMAGE_NAME in "${IMAGES[@]}"
@@ -333,38 +339,60 @@ fi
 ROUTES_AUTOGENERATE_ENABLED=$(cat .lagoon.yml | shyaml get-value routes.autogenerate.enabled true)
 
 echo -e "\
-safeBranch: ${SAFE_BRANCH}\n\
-safeProject: ${SAFE_PROJECT}\n\
-branch: ${BRANCH}\n\
-lagoonGitBranch: ${BRANCH}\n\
-lagoonGitSafeBranch: ${SAFE_BRANCH}\n\
 project: ${PROJECT}\n\
-environment: ${SAFE_BRANCH}\n\
+environment: ${ENVIRONMENT}\n\
 environmentType: ${ENVIRONMENT_TYPE}\n\
 namespace: ${NAMESPACE}\n\
 gitSha: ${LAGOON_GIT_SHA}\n\
 registry: ${REGISTRY}\n\
+buildType: ${BUILD_TYPE}\n\
 routesAutogenerateInsecure: ${ROUTES_AUTOGENERATE_INSECURE}\n\
 routesAutogenerateEnabled: ${ROUTES_AUTOGENERATE_ENABLED}\n\
 routesAutogenerateSuffix: ${ROUTER_URL}\n\
+kubernetes: ${KUBERNETES}\n\
+lagoonVersion: ${LAGOON_VERSION}\n\
 " >> /kubectl-build-deploy/values.yaml
 
 echo -e "\
-SAFE_BRANCH=${SAFE_BRANCH}\n\
-SAFE_PROJECT=${SAFE_PROJECT}\n\
-BRANCH=${BRANCH}\n\
-LAGOON_GIT_BRANCH=${BRANCH}\n\
-LAGOON_GIT_SAFE_BRANCH=${SAFE_BRANCH}\n\
 LAGOON_PROJECT=${PROJECT}\n\
-LAGOON_ENVIRONMENT=${SAFE_BRANCH}\n\
+LAGOON_ENVIRONMENT=${ENVIRONMENT}\n\
 LAGOON_ENVIRONMENT_TYPE=${ENVIRONMENT_TYPE}\n\
-NAMESPACE=${NAMESPACE}\n\
 LAGOON_GIT_SHA=${LAGOON_GIT_SHA}\n\
-REGISTRY=${REGISTRY}\n\
-ROUTES_AUTOGENERATE_INSECURE=${ROUTES_AUTOGENERATE_INSECURE}\n\
-ROUTES_AUTOGENERATE_ENABLED=${ROUTES_AUTOGENERATE_ENABLED}\n\
-ROUTES_AUTOGENERATE_SUFFIX=${ROUTER_URL}\n\
+LAGOON_KUBERNETES=${KUBERNETES}\n\
 " >> /kubectl-build-deploy/values.env
+
+# DEPRECATED: will be removed with Lagoon 3.0.0
+# LAGOON_GIT_SAFE_BRANCH is pointing to the enviornment name, therefore also is filled if this environment
+# is created by a PR or Promote workflow. This technically wrong, therefore will be removed
+echo -e "\
+LAGOON_GIT_SAFE_BRANCH=${ENVIRONMENT}\n\
+" >> /kubectl-build-deploy/values.env
+
+if [ "$BUILD_TYPE" == "branch" ]; then
+  echo -e "\
+branch: ${BRANCH}\n\
+" >> /kubectl-build-deploy/values.yaml
+
+  echo -e "\
+LAGOON_GIT_BRANCH=${BRANCH}\n\
+" >> /kubectl-build-deploy/values.env
+fi
+
+if [ "$BUILD_TYPE" == "pullrequest" ]; then
+  echo -e "\
+prHeadBranch=${PR_HEAD_BRANCH}\n\
+prBaseBranch=${PR_BASE_BRANCH}\n\
+prTitle=${PR_TITLE}\n\
+prNumber=${PR_NUMBER}\n\
+" >> /kubectl-build-deploy/values.yaml
+
+  echo -e "\
+LAGOON_PR_HEAD_BRANCH=${PR_HEAD_BRANCH}\n\
+LAGOON_PR_BASE_BRANCH=${PR_BASE_BRANCH}\n\
+LAGOON_PR_TITLE=${PR_TITLE}\n\
+LAGOON_PR_NUMBER=${PR_NUMBER}\n\
+" >> /kubectl-build-deploy/values.env
+fi
 
 for SERVICE_TYPES_ENTRY in "${SERVICE_TYPES[@]}"
 do
@@ -383,6 +411,7 @@ do
 
   HELM_SERVICE_TEMPLATE="templates/service.yaml"
   if [ -f /kubectl-build-deploy/helmcharts/${SERVICE_TYPE}/$HELM_SERVICE_TEMPLATE ]; then
+    cat /kubectl-build-deploy/values.yaml
     helm template ${SERVICE_NAME} /kubectl-build-deploy/helmcharts/${SERVICE_TYPE} -s $HELM_SERVICE_TEMPLATE -f /kubectl-build-deploy/values.yaml | outputToYaml
   fi
 
@@ -597,13 +626,12 @@ monitoringUrls: ${MONITORING_URLS}\n\
 " >> /kubectl-build-deploy/values.yaml
 
 echo -e "\
-ROUTE=${ROUTE}\n\
-ROUTES=${ROUTES}\n\
-AUTOGENERATED_ROUTES=${AUTOGENERATED_ROUTES}\n\
-MONITORING_URLS=${MONITORING_URLS}\n\
+LAGOON_ROUTE=${ROUTE}\n\
+LAGOON_ROUTES=${ROUTES}\n\
+LAGOON_AUTOGENERATED_ROUTES=${AUTOGENERATED_ROUTES}\n\
+LAGOON_MONITORING_URLS=${MONITORING_URLS}\n\
 " >> /kubectl-build-deploy/values.env
 
-cat /kubectl-build-deploy/values.env
 # Generate a Config Map with project wide env variables
 kubectl -n ${NAMESPACE} create configmap lagoon-env -o yaml --dry-run --from-env-file=/kubectl-build-deploy/values.env | kubectl apply -n ${NAMESPACE} -f -
 
@@ -629,7 +657,7 @@ if [ ! -z "$LAGOON_ENVIRONMENT_VARIABLES" ]; then
   fi
 fi
 
-if [ "$TYPE" == "pullrequest" ]; then
+if [ "$BUILD_TYPE" == "pullrequest" ]; then
   kubectl patch --insecure-skip-tls-verify \
     -n ${NAMESPACE} \
     configmap lagoon-env \
@@ -653,25 +681,27 @@ do
         # We added a timeout of 10 minutes (120 retries) before exit
         SERVICE_BROKER_COUNTER=1
         SERVICE_BROKER_TIMEOUT=180
-        until kubectl get --insecure-skip-tls-verify -n ${NAMESPACE} secret ${SERVICE_NAME}-operator-credentials
+        # use the secret name from the consumer to prevent credential clash
+        SECRET_NAME=$(kubectl --insecure-skip-tls-verify -n ${NAMESPACE} get mariadbconsumer/${SERVICE_NAME} -o yaml | shyaml get-value spec.secret)
+        until kubectl --insecure-skip-tls-verify -n ${NAMESPACE} get secret ${SECRET_NAME}
         do
         if [ $SERVICE_BROKER_COUNTER -lt $SERVICE_BROKER_TIMEOUT ]; then
           let SERVICE_BROKER_COUNTER=SERVICE_BROKER_COUNTER+1
-          echo "Secret ${SERVICE_NAME}-operator-credentials not available yet, waiting for 5 secs"
+          echo "Secret ${SECRET_NAME} not available yet, waiting for 5 secs"
           sleep 5
         else
-          echo "Timeout of $SERVICE_BROKER_TIMEOUT for ${SERVICE_NAME}-operator-credentials reached"
+          echo "Timeout of $SERVICE_BROKER_TIMEOUT for ${SECRET_NAME} reached"
           exit 1
         fi
         done
         # Load credentials out of secret
-        kubectl get --insecure-skip-tls-verify -n ${NAMESPACE} secret ${SERVICE_NAME}-operator-credentials -o yaml > /kubectl-build-deploy/lagoon/${SERVICE_NAME}-operator-credentials.yml
+        kubectl --insecure-skip-tls-verify -n ${NAMESPACE} get secret ${SECRET_NAME} -o yaml > /kubectl-build-deploy/lagoon/${SERVICE_NAME}-credentials.yml
         set +x
-        DB_HOST=$(cat /kubectl-build-deploy/lagoon/${SERVICE_NAME}-operator-credentials.yml | shyaml get-value data.DB_HOST | base64 -d)
-        DB_USER=$(cat /kubectl-build-deploy/lagoon/${SERVICE_NAME}-operator-credentials.yml | shyaml get-value data.DB_USER | base64 -d)
-        DB_PASSWORD=$(cat /kubectl-build-deploy/lagoon/${SERVICE_NAME}-operator-credentials.yml | shyaml get-value data.DB_PASSWORD | base64 -d)
-        DB_NAME=$(cat /kubectl-build-deploy/lagoon/${SERVICE_NAME}-operator-credentials.yml | shyaml get-value data.DB_NAME | base64 -d)
-        DB_PORT=$(cat /kubectl-build-deploy/lagoon/${SERVICE_NAME}-operator-credentials.yml | shyaml get-value data.DB_PORT | base64 -d)
+        DB_HOST=$(cat /kubectl-build-deploy/lagoon/${SERVICE_NAME}-credentials.yml | shyaml get-value data.DB_HOST | base64 -d)
+        DB_USER=$(cat /kubectl-build-deploy/lagoon/${SERVICE_NAME}-credentials.yml | shyaml get-value data.DB_USER | base64 -d)
+        DB_PASSWORD=$(cat /kubectl-build-deploy/lagoon/${SERVICE_NAME}-credentials.yml | shyaml get-value data.DB_PASSWORD | base64 -d)
+        DB_NAME=$(cat /kubectl-build-deploy/lagoon/${SERVICE_NAME}-credentials.yml | shyaml get-value data.DB_NAME | base64 -d)
+        DB_PORT=$(cat /kubectl-build-deploy/lagoon/${SERVICE_NAME}-credentials.yml | shyaml get-value data.DB_PORT | base64 -d)
 
         # Add credentials to our configmap, prefixed with the name of the servicename of this servicebroker
         kubectl patch --insecure-skip-tls-verify \
@@ -713,7 +743,7 @@ if [[ $THIS_IS_TUG == "true" ]]; then
     kubectl --insecure-skip-tls-verify -n ${NAMESPACE} tag --source=docker "${TUG_REGISTRY}/${TUG_REGISTRY_REPOSITORY}/${TUG_IMAGE_PREFIX}${TUG_IMAGE}:${SAFE_BRANCH}" "${TUG_IMAGE}:latest"
   done
 
-elif [ "$TYPE" == "pullrequest" ] || [ "$TYPE" == "branch" ]; then
+elif [ "$BUILD_TYPE" == "pullrequest" ] || [ "$BUILD_TYPE" == "branch" ]; then
 
   # All images that should be pulled are tagged as Images directly in OpenShift Registry
   for IMAGE_NAME in "${!IMAGES_PULL[@]}"
@@ -745,7 +775,7 @@ elif [ "$TYPE" == "pullrequest" ] || [ "$TYPE" == "branch" ]; then
     IMAGE_HASHES[${IMAGE_NAME}]=$(docker inspect ${REGISTRY}/${NAMESPACE}/${IMAGE_NAME}:${IMAGE_TAG:-latest} --format '{{index .RepoDigests 0}}')
   done
 
-# elif [ "$TYPE" == "promote" ]; then
+# elif [ "$BUILD_TYPE" == "promote" ]; then
 
 #   for IMAGE_NAME in "${IMAGES[@]}"
 #   do

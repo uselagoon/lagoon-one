@@ -561,7 +561,8 @@ build-list:
 	done
 
 # Define list of all tests
-all-k8s-tests-list:=				nginx
+all-k8s-tests-list:=				nginx \
+														drupal
 all-k8s-tests = $(foreach image,$(all-k8s-tests-list),k8s-tests/$(image))
 
 # Run all k8s tests
@@ -569,7 +570,8 @@ all-k8s-tests = $(foreach image,$(all-k8s-tests-list),k8s-tests/$(image))
 k8s-tests: $(all-k8s-tests)
 
 .PHONY: $(all-k8s-tests)
-$(all-k8s-tests): k3d kubernetes-test-services-up push-local-registry
+$(all-k8s-tests): k3d kubernetes-test-services-up
+		$(MAKE) push-local-registry -j6
 		$(eval testname = $(subst k8s-tests/,,$@))
 		IMAGE_REPO=$(CI_BUILD_TAG) docker-compose -p $(CI_BUILD_TAG) run --rm tests-kubernetes ansible-playbook --skip-tags="skip-on-kubernetes" /ansible/tests/$(testname).yaml $(testparameter)
 
@@ -661,6 +663,10 @@ drupaltest-services-up: main-test-services-up $(foreach image,$(drupal-test-serv
 .PHONY: webhooks-test-services-up
 webhooks-test-services-up: main-test-services-up $(foreach image,$(webhooks-test-services),build/$(image))
 	IMAGE_REPO=$(CI_BUILD_TAG) docker-compose -p $(CI_BUILD_TAG) up -d $(webhooks-test-services)
+
+.PHONY: local-registry-up
+local-registry-up: build/local-registry
+	IMAGE_REPO=$(CI_BUILD_TAG) docker-compose -p $(CI_BUILD_TAG) up -d local-registry
 
 openshift-run-api-tests = $(foreach image,$(api-tests),openshift-tests/$(image))
 .PHONY: $(openshift-run-api-tests)
@@ -844,7 +850,7 @@ up:
 	$(MAKE) wait-for-keycloak
 
 down:
-	IMAGE_REPO=$(CI_BUILD_TAG) docker-compose -p $(CI_BUILD_TAG) down -v
+	IMAGE_REPO=$(CI_BUILD_TAG) docker-compose -p $(CI_BUILD_TAG) down -v --remove-orphans
 
 # kill all containers containing the name "lagoon"
 kill:
@@ -928,7 +934,7 @@ openshift-lagoon-setup:
 minishift/configure-lagoon-local: openshift-lagoon-setup
 	eval $$(./local-dev/minishift/minishift --profile $(CI_BUILD_TAG) oc-env); \
 	bash -c "oc process -n lagoon -p SERVICE_IMAGE=172.30.1.1:5000/lagoon/docker-host:latest -p REPOSITORY_TO_UPDATE=lagoon -f services/docker-host/docker-host.yaml | oc -n lagoon apply -f -"; \
-	oc -n default set env dc/router -e ROUTER_LOG_LEVEL=info -e ROUTER_SYSLOG_ADDRESS=192.168.42.1:5140;
+	oc -n default set env dc/router -e ROUTER_LOG_LEVEL=info -e ROUTER_SYSLOG_ADDRESS=172.17.0.1:5140;
 
 # Stop MiniShift
 .PHONY: minishift/stop
@@ -989,6 +995,7 @@ else
 endif
 
 k3d: local-dev/k3d local-dev/kubectl build/docker-host
+	$(MAKE) local-registry-up
 	$(info starting k3d with name $(K3D_NAME))
 	$(info Creating Loopback Interface for docker gateway if it does not exist, this might ask for sudo)
 ifeq ($(ARCH), darwin)
@@ -1027,7 +1034,7 @@ else
 	DOCKER_IP="$$(docker network inspect bridge --format='{{(index .IPAM.Config 0).Gateway}}')"; \
 	sed -i "s/172\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}/$${DOCKER_IP}/g" local-dev/api-data/03-populate-api-data-kubernetes.gql docker-compose.yaml;
 endif
-	touch $@
+	echo "$(K3D_NAME)" > $@
 	$(MAKE) push-kubectl-build-deploy-dind
 
 .PHONY: push-kubectl-build-deploy-dind
@@ -1041,10 +1048,10 @@ rebuild-push-kubectl-build-deploy-dind:
 	$(MAKE) push-kubectl-build-deploy-dind
 
 k3d-kubeconfig:
-	export KUBECONFIG="$$(./local-dev/k3d get-kubeconfig --name='$(K3D_NAME)')"
+	export KUBECONFIG="$$(./local-dev/k3d get-kubeconfig --name=$$(cat k3d))"
 
 k3d-dashboard:
-	export KUBECONFIG="$$(./local-dev/k3d get-kubeconfig --name='$(K3D_NAME)')"; \
+	export KUBECONFIG="$$(./local-dev/k3d get-kubeconfig --name=$$(cat k3d))"; \
 	local-dev/kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v2.0.0-rc2/aio/deploy/recommended.yaml; \
 	local-dev/kubectl -n kubernetes-dashboard rollout status deployment kubernetes-dashboard -w; \
 	echo -e "\nUse this token:"; \
@@ -1063,7 +1070,7 @@ k8s-dashboard:
 # Stop k3d
 .PHONY: k3d/stop
 k3d/stop: local-dev/k3d
-	./local-dev/k3d delete --name $(K3D_NAME) || true
+	./local-dev/k3d delete --name=$$(cat k3d) || true
 	rm -f k3d
 
 # Stop All k3d

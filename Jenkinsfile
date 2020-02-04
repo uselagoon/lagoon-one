@@ -3,8 +3,8 @@ node {
   openshift_version = 'v3.11.0'
   minishift_version = '1.34.1'
   kubernetes_versions = [
-    ["kubernetes": "v1.15", "k3s": "v0.9.1", "kubectl": "v1.15.4"],
-    ["kubernetes": "v1.16", "k3s": "v1.0.1", "kubectl": "v1.16.3"],
+    // ["kubernetes": "v1.15", "k3s": "v0.9.1", "kubectl": "v1.15.4"],
+    // ["kubernetes": "v1.16", "k3s": "v1.0.1", "kubectl": "v1.16.3"],
     ["kubernetes": "v1.17", "k3s": "v1.17.0-k3s.1", "kubectl": "v1.17.0"]
   ]
 
@@ -48,7 +48,7 @@ node {
                 stage ("kubernetes ${kubernetes_version['kubernetes']} tests") {
                   try {
                     sh "make k3d/clean K3S_VERSION=${kubernetes_version['k3s']} KUBECTL_VERSION=${kubernetes_version['kubectl']}"
-                    sh "make k3d K3S_VERSION=${kubernetes_version['k3s']}${kubernetes_version['kubectl']}"
+                    sh "make k3d K3S_VERSION=${kubernetes_version['k3s']} KUBECTL_VERSION=${kubernetes_version['kubectl']}"
                     sh "make k8s-tests"
                   } catch (e) {
                     echo "Something went wrong, trying to cleanup"
@@ -133,6 +133,8 @@ node {
 
 def cleanup() {
   try {
+    sh "make down || true"
+    sh "make kill"
     sh "make down"
     sh "make minishift/cleanall"
     sh "make k3d/cleanall"

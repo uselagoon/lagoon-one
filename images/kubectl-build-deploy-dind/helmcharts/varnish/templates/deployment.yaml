@@ -4,6 +4,8 @@ metadata:
   name: {{ include "varnish.fullname" . }}
   labels:
     {{- include "varnish.labels" . | nindent 4 }}
+  annotations:
+    {{- include "varnish.annotations" . | nindent 4 }}
 spec:
   replicas: {{ .Values.replicaCount }}
   selector:
@@ -12,13 +14,15 @@ spec:
   template:
     metadata:
       labels:
-        {{- include "varnish.selectorLabels" . | nindent 8 }}
+        {{- include "varnish.labels" . | nindent 8 }}
+      annotations:
+        {{- include "varnish.annotations" . | nindent 8 }}
     spec:
     {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
     {{- end }}
-      priorityClassName: {{ include "varnish.lagoon-priority" . }}
+      priorityClassName: {{ include "varnish.lagoonPriority" . }}
       enableServiceLinks: false
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}

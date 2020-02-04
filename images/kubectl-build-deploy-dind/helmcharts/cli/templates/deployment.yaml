@@ -4,6 +4,8 @@ metadata:
   name: {{ include "cli.fullname" . }}
   labels:
     {{- include "cli.labels" . | nindent 4 }}
+  annotations:
+    {{- include "cli.annotations" . | nindent 4 }}
 spec:
   replicas: {{ .Values.replicaCount }}
   selector:
@@ -12,13 +14,15 @@ spec:
   template:
     metadata:
       labels:
-        {{- include "cli.selectorLabels" . | nindent 8 }}
+        {{- include "cli.labels" . | nindent 8 }}
+      annotations:
+        {{- include "cli.annotations" . | nindent 8 }}
     spec:
     {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
     {{- end }}
-      priorityClassName: {{ include "cli.lagoon-priority" . }}
+      priorityClassName: {{ include "cli.lagoonPriority" . }}
       enableServiceLinks: false
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
