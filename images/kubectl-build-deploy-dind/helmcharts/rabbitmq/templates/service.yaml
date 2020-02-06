@@ -4,6 +4,8 @@ metadata:
   name: {{ include "rabbitmq.fullname" . }}
   labels:
     {{- include "rabbitmq.labels" . | nindent 4 }}
+  annotations:
+    {{- include "rabbitmq.annotations" . | nindent 4 }}
 spec:
   type: {{ .Values.service.type }}
   ports:
