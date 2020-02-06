@@ -4,6 +4,8 @@ metadata:
   name: {{ include "rabbitmq-cluster.fullname" . }}
   labels:
     {{- include "rabbitmq-cluster.labels" . | nindent 4 }}
+  annotations:
+    {{- include "rabbitmq-cluster.annotations" . | nindent 4 }}
 spec:
   ports:
     - port: {{ .Values.service.httpApi.port }}

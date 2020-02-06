@@ -1,7 +1,11 @@
-apiVersion: apps/v1beta1
+apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: {{ include "rabbitmq-cluster.fullname" . }}
+  labels:
+    {{- include "rabbitmq-cluster.labels" . | nindent 4 }}
+  annotations:
+    {{- include "rabbitmq-cluster.annotations" . | nindent 4 }}
 spec:
   serviceName: {{ include "rabbitmq-cluster.fullname" . }}-headless
   replicas: {{ .Values.replicaCount }}
@@ -11,9 +15,9 @@ spec:
   template:
     metadata:
       labels:
-        branch: ${SAFE_BRANCH}
-        project: ${SAFE_PROJECT}
-        service: {{ include "rabbitmq-cluster.fullname" . }}
+        {{- include "rabbitmq-cluster.selectorLabels" . | nindent 8 }}
+      annotations:
+        {{- include "rabbitmq-cluster.annotations" . | nindent 8 }}
     spec:
       serviceAccountName: {{ include "rabbitmq-cluster.fullname" . }}-sa
       affinity:
@@ -26,7 +30,7 @@ spec:
                     values:
                       - {{ include "rabbitmq-cluster.fullname" . }}
               topologyKey: kubernetes.io/hostname
-        priorityClassName: {{ include "rabbitmq-cluster.lagoon-priority" . }}
+        priorityClassName: {{ include "rabbitmq-cluster.lagoonPriority" . }}
       containers:
       - name: {{ include "rabbitmq-cluster.fullname" . }}
         command:
