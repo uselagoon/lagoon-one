@@ -8,7 +8,7 @@ RUN apk add --no-cache --update --virtual .build-deps \
       && gem install fluent-plugin-kubernetes_metadata_filter \
       && gem sources --clear-all \
       && apk del .build-deps \
-      && rm -rf /tmp/* /var/tmp/* /usr/lib/ruby/gems/*/cache/*.gem
+      && rm -rf /tmp/* /var/tmp/* /usr/lib/ruby/gems/*/cache/*.gem \
       && apk add --no-cache curl
 
 COPY fluent.conf /fluentd/etc/
