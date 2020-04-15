@@ -6,6 +6,7 @@ USER root
 RUN apk add --no-cache --update --virtual .build-deps \
       build-base ruby-dev \
       && gem install fluent-plugin-kubernetes_metadata_filter \
+      && gem install fluent-plugin-prometheus \
       && gem sources --clear-all \
       && apk del .build-deps \
       && rm -rf /tmp/* /var/tmp/* /usr/lib/ruby/gems/*/cache/*.gem \
