@@ -9,6 +9,7 @@ RUN apk add --no-cache --update --virtual .build-deps \
       && gem install fluent-plugin-prometheus \
       && gem install fluent-plugin-record-modifier \
       && gem install fluent-plugin-rewrite-tag-filter \
+      && gem install fluent-plugin-route \
       && gem sources --clear-all \
       && apk del .build-deps \
       && rm -rf /tmp/* /var/tmp/* /usr/lib/ruby/gems/*/cache/*.gem \
