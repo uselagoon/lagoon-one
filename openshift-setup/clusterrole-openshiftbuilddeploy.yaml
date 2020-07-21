@@ -30,3 +30,10 @@ rules:
   - builds/custom
   verbs:
   - create
+- apiGroups:
+  - v1
+  - ""
+  resources:
+  - namespaces
+  verbs:
+  - patch
