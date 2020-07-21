@@ -354,14 +354,21 @@ const messageConsumer = async msg => {
           "apiVersion":"v1",
           "kind":"ProjectRequest",
           "metadata": {
-            "name":openshiftProject,
+            "name":openshiftProject
+          },
+          "displayName":`[${projectName}] ${branchName}`
+        } });
+      // Label the namespace
+      const namespacePatch = promisify(kubernetes.namespaces(openshiftProject).patch)
+      await namespacePatch({
+        body: {
+          "metadata": {
             "labels": {
               "lagoon.sh/project": safeProjectName,
               "lagoon.sh/environment": safeBranchName,
               "lagoon.sh/environmentType": environmentType
             }
-          },
-          "displayName":`[${projectName}] ${branchName}`
+          }
         } });
     } else {
       logger.error(err)
