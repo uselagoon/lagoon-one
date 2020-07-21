@@ -31,7 +31,6 @@ rules:
   verbs:
   - create
 - apiGroups:
-  - v1
   - ""
   resources:
   - namespaces
