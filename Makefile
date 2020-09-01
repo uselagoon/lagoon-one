@@ -450,7 +450,8 @@ services :=       api \
 									harborregistry \
 									harborregistryctl \
 									harbor-trivy \
-									api-redis
+									api-redis \
+									ssh-portal
 
 service-images += $(services)
 
