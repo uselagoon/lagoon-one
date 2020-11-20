@@ -196,6 +196,16 @@ const messageConsumer = async msg => {
                  "key": "lagoon/build",
                  "effect": "PreferNoSchedule",
                  "operator": "Exists"
+              },
+              {
+                 "key": "lagoon.sh/build",
+                 "effect": "NoSchedule",
+                 "operator": "Exists"
+              },
+              {
+                 "key": "lagoon.sh/build",
+                 "effect": "PreferNoSchedule",
+                 "operator": "Exists"
               }
             ],
             "containers": [
