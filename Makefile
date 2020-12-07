@@ -1000,7 +1000,7 @@ kind/preload: kind/cluster $(addprefix build/,$(KIND_SERVICES))
 		done
 
 .PHONY: kind/test
-kind/test: kind/cluster kind/preload local-dev/helm local-dev/kind local-dev/kubectl local-dev/jq helm/repos
+kind/test: kind/cluster local-dev/helm local-dev/kind local-dev/kubectl local-dev/jq helm/repos
 	export CHARTSDIR=$$(mktemp -dp . lagoon-charts.XXX) \
 		&& git clone https://github.com/uselagoon/lagoon-charts.git "$$CHARTSDIR" \
 		&& cd "$$CHARTSDIR" \
