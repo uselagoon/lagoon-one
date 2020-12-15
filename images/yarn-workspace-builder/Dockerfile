@@ -32,6 +32,8 @@ COPY services/openshiftjobsmonitor/package.json /app/services/openshiftjobsmonit
 COPY services/openshiftmisc/package.json /app/services/openshiftmisc/
 COPY services/openshiftremove/package.json /app/services/openshiftremove/
 COPY services/controllerhandler/package.json /app/services/controllerhandler/
+COPY services/kubernetesbuilddeploy/package.json /app/services/kubernetesbuilddeploy/
+COPY services/rest2tasks/package.json /app/services/rest2tasks/
 COPY services/webhook-handler/package.json /app/services/webhook-handler/
 COPY services/webhooks2tasks/package.json /app/services/webhooks2tasks/
 COPY services/ui/package.json /app/services/ui/
