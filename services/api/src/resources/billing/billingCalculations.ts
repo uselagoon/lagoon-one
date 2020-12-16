@@ -96,7 +96,8 @@ export const getProjectsCosts = (currency, projects, modifiers: BillingModifier[
   const prod = prodCost(billingGroup);
   const dev = devCost(billingGroup);
 
-  const environmentCost = { prod: prod.cost, dev: dev.cost };
+  // ternary null check on prod.cost and dev.cost
+  const environmentCost = { prod: prod.cost ? prod.cost : 0, dev: dev.cost ? dev.cost : 0 };
   const environmentCostDescription = {prod: {...prod }, dev: {...dev} };
 
   const hitCostDescription = { ...hitCost };
@@ -142,7 +143,7 @@ export const getProjectsCosts = (currency, projects, modifiers: BillingModifier[
     return { total, description };
   }
   const sortedModifiers = modifiers.sort(modifiersSortFn);
-  const subTotal = hitCost.cost + storage.cost + prod.cost + dev.cost;
+  const subTotal = (hitCost.cost ? hitCost.cost : 0) + (storage.cost ? storage.cost : 0) + (prod.cost ? prod.cost : 0) + (dev.cost ? dev.cost : 0);
   const { total, description } = sortedModifiers.reduce(reducerFn, {total: subTotal, description: []});
 
   return ({
@@ -299,30 +300,44 @@ export const devCost = ({ currency, projects }: IBillingGroup) => {
   const polySiteGroups = (Math.max(Math.round(projects.length / 10), 1));
   const polySiteIncludedHours = polySiteGroups * (averageProdHours * 2);
 
-  const polyReducerFn = (acc, project) => ({
-    // Poly Sites get two free dev environments per lot of 10 polysite groups
-    // See IDGSDF in BillingCalculations.test.ts
-    // EXAMPLE:   8 projects w/ 720 hours each dev site :
-    //            total dev hours = 720 * 8 ->  5760
-    //            Included free hours =  (1 x (720 x 2)) -> 1440
-    //            Dev Site Per Hour Cost = 0.0139
-    //            (5760 - 1440) * 0.0139 = 60.05
-    cost:  ((acc.quantity + project.devHours) - polySiteIncludedHours) * devSitePerHour,
-    description: [
-      ...acc.description,
-      {
-        name: project.name,
-        hours: project.devHours,
-        included: 0,
-        additional: project.devHours
-      }
-    ],
-    quantity: acc.quantity + project.devHours
+  // Poly Sites get two free dev environments per lot of 10 polysite groups
+  // See IDGSDF in BillingCalculations.test.ts
+  // EXAMPLE:   8 projects w/ 720 hours each dev site :
+  //            total dev hours = 720 * 8 ->  5760
+  //            Included free hours =  (1 x (720 x 2)) -> 1440
+  //            Dev Site Per Hour Cost = 0.0139
+  //            (5760 - 1440) * 0.0139 = 60.05
+  const polyReducerFn = (acc, project) => {
+    const totalDevHours = acc.totalDevHours + project.devHours;
+    const quantity = totalDevHours - polySiteIncludedHours;
+
+    return {
+      totalDevHours,
+      quantity,
+      cost: quantity * devSitePerHour,
+      description: [
+        ...acc.description,
+        {
+          name: project.name,
+          hours: project.devHours,
+          included: 'N/A',
+          additional: 'N/A'
+        }
+      ]
+    };
+  };
+
+  const reducerFn =
+    availability === AVAILABILITY.POLYSITE
+      ? polyReducerFn
+      : standardHighReducerFn;
+
+  const { cost, description, quantity } = projects.reduce(reducerFn, {
+    totalDevHours: 0,
+    quantity: 0,
+    cost: 0,
+    description: []
   });
-
-  const reducerFn =  availability === AVAILABILITY.POLYSITE ? polyReducerFn : standardHighReducerFn;
-
-  const {cost, description, quantity} = projects.reduce(reducerFn, { cost: 0, description: [], quantity: 0});
 
   return {
     cost: Number(cost.toFixed(2)),

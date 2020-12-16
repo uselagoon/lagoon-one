@@ -247,6 +247,8 @@ CREATE TABLE IF NOT EXISTS project_notification (
   nid      int,
   pid      int REFERENCES project (id),
   type     ENUM('slack','rocketchat','microsoftteams','email') NOT NULL,
+  content_type ENUM('deployment', 'problem') NOT NULL,
+  notification_severity_threshold int NOT NULL default 0,
   CONSTRAINT project_notification_pkey PRIMARY KEY (nid, pid, type)
 );
 
@@ -279,6 +281,8 @@ CREATE TABLE IF NOT EXISTS environment_fact (
   environment              int REFERENCES environment (id),
   name                     varchar(300) NOT NULL,
   value                    varchar(300) NOT NULL,
+  source                   varchar(300) DEFAULT '',
+  description              TEXT NULL    DEFAULT '',
   created                  timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UNIQUE(environment, name)
 );

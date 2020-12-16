@@ -114,13 +114,13 @@ export const addProblem = async (
     Sql.insertProblem({
       severity,
       severity_score: severityScore,
-      lagoon_service: service,
+      lagoon_service: service || '',
       identifier,
       environment: environmentId,
       source,
       associated_package: associatedPackage,
       description,
-      version,
+      version: version || '',
       fixed_version: fixedVersion,
       links: links,
       data,
@@ -199,7 +199,7 @@ export const addProblemHarborScanMatch = async (
       description,
       defaultLagoonProject,
       defaultLagoonEnvironment,
-      defaultLagoonServiceName,
+      defaultLagoonService,
       regex
     },
   },
@@ -219,7 +219,7 @@ export const addProblemHarborScanMatch = async (
         description,
         default_lagoon_project: defaultLagoonProject,
         default_lagoon_environment: defaultLagoonEnvironment,
-        default_lagoon_service_name: defaultLagoonServiceName,
+        default_lagoon_service_name: defaultLagoonService,
         regex
       }
     ),

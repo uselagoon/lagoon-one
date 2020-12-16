@@ -6,15 +6,19 @@ import { Sql as PSql } from './sql';
 import { Sql } from '../env-variables/sql';
 import { isPatchEmpty, prepare, query, whereAnd } from '../../util/db';
 
+const defaultHarborUrl = R.propOr('http://harbor-harbor-core.harbor.svc.cluster.local:80', 'HARBOR_URL', process.env);
+
 const lagoonHarborRoute = R.compose(
-  R.defaultTo('http://172.17.0.1:8084'),
+  R.defaultTo(defaultHarborUrl),
   R.find(R.test(/harbor-nginx/)),
   R.split(','),
   R.propOr('', 'LAGOON_ROUTES'),
 )(process.env) as string;
 
+const defaultWebhookUrl = R.propOr('http://webhook-handler:3000', 'WEBHOOK_URL', process.env);
+
 const lagoonWebhookAddress = R.compose(
-  R.defaultTo('http://webhook-handler:3000'),
+  R.defaultTo(defaultWebhookUrl),
   R.find(R.test(/webhook-handler/)),
   R.split(','),
   R.propOr('', 'LAGOON_ROUTES'),
@@ -41,7 +45,7 @@ async function createHarborProject(sqlClient: MariaClient, harborClient, lagoonP
   } catch (err) {
     if (err.statusCode == 409) {
       // 409 means project already exists
-      logger.info(`Unable to create the harbor project "${lagoonProjectName}", as it already exists in harbor, continuing with existing project`)
+      logger.info(`Unable to create the harbor project "${lagoonProjectName}", as it already exists in harbor; continuing with existing project`)
     } else {
       logger.error(`Unable to create the harbor project "${lagoonProjectName}", error: ${err}`)
       return ""
@@ -50,8 +54,30 @@ async function createHarborProject(sqlClient: MariaClient, harborClient, lagoonP
 
   // Get new harbor project's id
   try {
-    const res = await harborClient.get(`projects?name=${lagoonProjectName}`)
-    var harborProjectID = res.body[0].project_id
+    // Grab paginated project list results
+    const pageSize = 100
+    let results = []
+    let res = await harborClient.get(`projects?name=${lagoonProjectName}&page_size=${pageSize}`)
+
+    if (parseInt(res.headers['x-total-count']) > pageSize) {
+      let i = 1
+      while (res.body != null) {
+        results = results.concat(res.body)
+        i++
+        res = await harborClient.get(`projects?name=${lagoonProjectName}&page_size=${pageSize}&page=${i}`)
+      }
+    } else {
+      results = res.body
+    }
+    
+    // Search array of objects for correct project
+    for (let proj of results) {
+      if (proj.name == lagoonProjectName) {
+        var harborProjectID = proj.project_id
+        break
+      }
+    }
+
     logger.debug(`Harbor project id for ${lagoonProjectName} is: ${harborProjectID}`)
   } catch (err) {
     if (err.statusCode == 404) {
