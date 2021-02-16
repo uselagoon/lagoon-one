@@ -79,11 +79,15 @@ node {
                 }
               }
               stage ('minishift tests') {
-                withCredentials([string(credentialsId: 'github_api_public_read', variable: 'MINISHIFT_GITHUB_API_TOKEN')]) {
+                withCredentials([
+                  string(credentialsId: 'github_api_public_read', variable: 'MINISHIFT_GITHUB_API_TOKEN'),
+                  string(credentialsId: 'amazeeiojenkins-dockerhub-password', variable: 'PASSWORD')
+                ]) {
                   try {
                     if (env.CHANGE_ID && pullRequest.labels.contains("skip-openshift-tests")) {
                       sh script: 'echo "PR identified as not needing Openshift testing."', label: "Skipping Openshift testing stage"
                     } else {
+                      sh script: 'docker login -u amazeeiojenkins -p $PASSWORD', label: "Docker login"
                       sh 'make minishift/cleanall || echo'
                       sh script: "make minishift MINISHIFT_GITHUB_API_TOKEN=$MINISHIFT_GITHUB_API_TOKEN MINISHIFT_CPUS=\$(nproc --ignore 3) MINISHIFT_MEMORY=24GB MINISHIFT_DISK_SIZE=70GB MINISHIFT_VERSION=${minishift_version} OPENSHIFT_VERSION=${openshift_version}", label: "Making openshift"
                       sh script: "make -O${SYNC_MAKE_OUTPUT} controller-openshift-tests -j1", label: "Making controller based openshift tests"
