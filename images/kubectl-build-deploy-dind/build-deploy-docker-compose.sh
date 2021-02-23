@@ -1321,6 +1321,14 @@ if [[ "${CAPABILITIES[@]}" =~ "backup.appuio.ch/v1alpha1/Schedule" ]]; then
     --set prune.retention.keepDaily=$DAILY_BACKUP_RETENTION
 fi
 
+# check for ISOLATION_NETWORK_POLICY feature flag, disabled by default
+if [ "$(featureFlag ISOLATION_NETWORK_POLICY)" = enabled ]; then
+	# add namespace isolation network policy to deployment
+	helm template isolation-network-policy /kubectl-build-deploy/helmcharts/isolation-network-policy \
+		-f /kubectl-build-deploy/values.yaml \
+		> $YAML_FOLDER/isolation-network-policy.yaml
+fi
+
 if [ "$(ls -A $YAML_FOLDER/)" ]; then
   find $YAML_FOLDER -type f -exec cat {} \;
   kubectl apply --insecure-skip-tls-verify -n ${NAMESPACE} -f $YAML_FOLDER/
