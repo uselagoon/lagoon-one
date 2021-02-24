@@ -62,25 +62,25 @@ node {
 
         try {
           parallel (
-            '1 tests': {
-              kubernetes_versions.each { kubernetes_version ->
-                stage ("kubernetes ${kubernetes_version['kubernetes']} tests") {
-                  try {
-                    if (env.CHANGE_ID && pullRequest.labels.contains("skip-kubernetes-tests")) {
-                      sh script: 'echo "PR identified as not needing Kubernetes testing."', label: "Skipping Kubernetes testing stage"
-                    } else {
-                      sh script: "make k3d/clean K3S_VERSION=${kubernetes_version['k3s']} KUBECTL_VERSION=${kubernetes_version['kubectl']}", label: "Removing any previous k3d versions"
-                      sh script: "make k3d K3S_VERSION=${kubernetes_version['k3s']} KUBECTL_VERSION=${kubernetes_version['kubectl']}", label: "Making k3d"
-                      sh script: "make -O${SYNC_MAKE_OUTPUT} controller-k8s-tests -j2", label: "Making controller based kubernetes tests"
-                      sh script: "make k3d/cleanall", label: "Removing kubernetes install"
-                    }
-                  } catch (e) {
-                    echo "Something went wrong, trying to cleanup"
-                    cleanup()
-                    throw e
+            '1 k8s': {
+              stage ("kubernetes tests") {
+                try {
+                  if (env.CHANGE_ID && pullRequest.labels.contains("skip-kubernetes-tests")) {
+                    sh script: 'echo "PR identified as not needing Kubernetes testing."', label: "Skipping Kubernetes testing stage"
+                  } else {
+                    sh script: "make k3d/clean K3S_VERSION=${kubernetes_version['k3s']} KUBECTL_VERSION=${kubernetes_version['kubectl']}", label: "Removing any previous k3d versions"
+                    sh script: "make k3d K3S_VERSION=${kubernetes_version['k3s']} KUBECTL_VERSION=${kubernetes_version['kubectl']}", label: "Making k3d"
+                    sh script: "make -O${SYNC_MAKE_OUTPUT} controller-k8s-tests -j2", label: "Making controller based kubernetes tests"
+                    sh script: "make k3d/cleanall", label: "Removing kubernetes install"
                   }
+                } catch (e) {
+                  echo "Something went wrong, trying to cleanup"
+                  cleanup()
+                  throw e
                 }
               }
+            }
+            '2 minishift': {
               stage ('minishift tests') {
                 withCredentials([string(credentialsId: 'github_api_public_read', variable: 'MINISHIFT_GITHUB_API_TOKEN')]) {
                   try {
@@ -88,9 +88,10 @@ node {
                       sh script: 'echo "PR identified as not needing Openshift testing."', label: "Skipping Openshift testing stage"
                     } else {
                       sh 'make minishift/cleanall || echo'
-                      sh script: "make minishift MINISHIFT_GITHUB_API_TOKEN=$MINISHIFT_GITHUB_API_TOKEN MINISHIFT_CPUS=\$(nproc --ignore 3) MINISHIFT_MEMORY=24GB MINISHIFT_DISK_SIZE=70GB MINISHIFT_VERSION=${minishift_version} OPENSHIFT_VERSION=${openshift_version}", label: "Making openshift"
+                      sh script: "make minishift MINISHIFT_GITHUB_API_TOKEN=$MINISHIFT_GITHUB_API_TOKEN MINISHIFT_CPUS=6 MINISHIFT_MEMORY=12GB MINISHIFT_DISK_SIZE=70GB MINISHIFT_VERSION=${minishift_version} OPENSHIFT_VERSION=${openshift_version}", label: "Making openshift"
                       sh script: "make -O${SYNC_MAKE_OUTPUT} controller-openshift-tests -j1", label: "Making controller based openshift tests"
                       sh script: "make -O${SYNC_MAKE_OUTPUT} openshift-tests -j1", label: "Making openshift tests"
+                      sh script: "make minishift/cleanall", label: "Removing minishift install"
                     }
                   } catch (e) {
                     echo "Something went wrong, trying to cleanup"
@@ -99,11 +100,8 @@ node {
                   }
                 }
               }
-              stage ('cleanup') {
-                cleanup()
-              }
-            },
-            '2 start services': {
+            }
+            '3 start services': {
               stage ('start services') {
                 try {
                   notifySlack()
@@ -117,7 +115,7 @@ node {
                 }
               }
             },
-            '3 push images to amazeeiolagoon': {
+            '4 push images to amazeeiolagoon': {
               stage ('push images to amazeeiolagoon/*') {
                 withCredentials([string(credentialsId: 'amazeeiojenkins-dockerhub-password', variable: 'PASSWORD')]) {
                   try {
