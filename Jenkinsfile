@@ -2,10 +2,9 @@ node {
 
   openshift_version = 'v3.11.0'
   minishift_version = '1.34.1'
-  kubernetes_versions = [
-    // ["kubernetes": "v1.15", "k3s": "v0.9.1", "kubectl": "v1.15.4"],
-    // ["kubernetes": "v1.16", "k3s": "v1.0.1", "kubectl": "v1.16.3"],
-    ["kubernetes": "v1.17", "k3s": "v1.17.0-k3s.1", "kubectl": "v1.17.0"]
+  kubernetes_version = 'v1.17'
+  k3s_version = 'v1.17.0-k3s.1'
+  kubectl_version = 'v1.17.0'
   ]
 
   env.MINISHIFT_HOME = "/data/jenkins/.minishift"
@@ -68,14 +67,14 @@ node {
                   if (env.CHANGE_ID && pullRequest.labels.contains("skip-kubernetes-tests")) {
                     sh script: 'echo "PR identified as not needing Kubernetes testing."', label: "Skipping Kubernetes testing stage"
                   } else {
-                    sh script: "make k3d/clean K3S_VERSION=${kubernetes_version['k3s']} KUBECTL_VERSION=${kubernetes_version['kubectl']}", label: "Removing any previous k3d versions"
-                    sh script: "make k3d K3S_VERSION=${kubernetes_version['k3s']} KUBECTL_VERSION=${kubernetes_version['kubectl']}", label: "Making k3d"
+                    sh script: "make k3d/clean K3S_VERSION=${k3s_version} KUBECTL_VERSION=${kubectl_version}", label: "Removing any previous k3d versions"
+                    sh script: "make k3d K3S_VERSION=${k3s_version} KUBECTL_VERSION=${kubectl_version}", label: "Making k3d"
                     sh script: "make -O${SYNC_MAKE_OUTPUT} controller-k8s-tests -j2", label: "Making controller based kubernetes tests"
                     sh script: "make k3d/cleanall", label: "Removing kubernetes install"
                   }
                 } catch (e) {
                   echo "Something went wrong, trying to cleanup"
-                  cleanup()
+                  sh script: "make k3d/cleanall", label: "Removing kubernetes install"
                   throw e
                 }
               }
@@ -95,7 +94,7 @@ node {
                     }
                   } catch (e) {
                     echo "Something went wrong, trying to cleanup"
-                    cleanup()
+                    sh script: "make minishift/cleanall", label: "Removing minishift install"
                     throw e
                   }
                 }
