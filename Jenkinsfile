@@ -5,7 +5,6 @@ node {
   kubernetes_version = 'v1.17'
   k3s_version = 'v1.17.0-k3s.1'
   kubectl_version = 'v1.17.0'
-  ]
 
   env.MINISHIFT_HOME = "/data/jenkins/.minishift"
 
