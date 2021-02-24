@@ -79,7 +79,7 @@ node {
                   throw e
                 }
               }
-            }
+            },
             '2 minishift': {
               stage ('minishift tests') {
                 withCredentials([string(credentialsId: 'github_api_public_read', variable: 'MINISHIFT_GITHUB_API_TOKEN')]) {
@@ -100,7 +100,7 @@ node {
                   }
                 }
               }
-            }
+            },
             '3 start services': {
               stage ('start services') {
                 try {
