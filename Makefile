@@ -34,19 +34,6 @@ SHELL := /bin/bash
 # make logs
 # Shows logs of Lagoon Services (aka docker-compose logs -f)
 
-# make minishift
-# Some tests need a full openshift running in order to test deployments and such. This can be
-# started via openshift. It will:
-# 1. Download minishift cli
-# 2. Start an OpenShift Cluster
-# 3. Configure OpenShift cluster to our needs
-
-# make minishift/stop
-# Removes an OpenShift Cluster
-
-# make minishift/clean
-# Removes all openshift related things: OpenShift itself and the minishift cli
-
 #######
 ####### Default Variables
 #######
@@ -257,7 +244,6 @@ build/logs-tee: services/logs-tee/Dockerfile
 build/storage-calculator: build/oc
 build/tests-controller-kubernetes: build/tests
 build/tests-kubernetes: build/tests
-build/tests-openshift: build/tests
 build/tests: tests/Dockerfile
 build/local-minio:
 # Auth SSH needs the context of the root folder, so we have it individually
@@ -272,6 +258,7 @@ build/local-git: local-dev/git/Dockerfile
 build/local-api-data-watcher-pusher: local-dev/api-data-watcher-pusher/Dockerfile
 build/local-registry: local-dev/registry/Dockerfile
 build/local-dbaas-provider: local-dev/dbaas-provider/Dockerfile
+build/local-postgresql-dbaas-provider: local-dev/postgresql-dbaas-provider/Dockerfile
 build/local-mongodb-dbaas-provider: local-dev/mongodb-dbaas-provider/Dockerfile
 
 # Images for local helpers that exist in another folder than the service images
@@ -279,6 +266,7 @@ localdevimages := local-git \
 									local-api-data-watcher-pusher \
 									local-registry \
 									local-dbaas-provider \
+									local-postgresql-dbaas-provider \
 									local-mongodb-dbaas-provider
 
 service-images += $(localdevimages)
@@ -317,14 +305,11 @@ build-list:
 	done
 
 # Define list of all tests
-all-k8s-tests-list:=				nginx \
-														drupal-php72 \
-														drupal-php73 \
-														drupal-php74 \
-														python \
+all-k8s-tests-list:=				features-kubernetes \
 														active-standby-kubernetes \
-														features-kubernetes \
-														node-mongodb
+														dbaas \
+														singles \
+														images
 
 all-k8s-tests = $(foreach image,$(all-k8s-tests-list),k8s-tests/$(image))
 
@@ -333,24 +318,50 @@ all-k8s-tests = $(foreach image,$(all-k8s-tests-list),k8s-tests/$(image))
 k8s-tests: $(all-k8s-tests)
 
 .PHONY: $(all-k8s-tests)
-$(all-k8s-tests): k3d k8s-test-services-up
+$(all-k8s-tests): k3d kubernetes-test-services-up
 		$(MAKE) push-local-registry -j6
 		$(eval testname = $(subst k8s-tests/,,$@))
 		IMAGE_REPO=$(CI_BUILD_TAG) UPSTREAM_REPO=$(UPSTREAM_REPO) UPSTREAM_TAG=$(UPSTREAM_TAG) docker-compose -p $(CI_BUILD_TAG) --compatibility run --rm \
-			tests-kubernetes ansible-playbook --skip-tags="skip-on-kubernetes,skip-on-jenkins" --extra-vars="@/ansible/tests/vars/test_vars.yaml" \
+			tests-kubernetes ansible-playbook --skip-tags="skip-on-kubernetes" \
 			/ansible/tests/$(testname).yaml \
 			--extra-vars \
 			"$$(cat $$(./local-dev/k3d get-kubeconfig --name='$(K3D_NAME)') | \
 				jq -rcsR '{kubeconfig: .}')"
 
-# push command of our base images into minishift
+# Define list of all tests
+all-controller-k8s-tests-list:=				python \
+														features-kubernetes \
+														active-standby-kubernetes \
+														github \
+														gitlab \
+														bitbucket
+
+all-controller-k8s-tests = $(foreach image,$(all-controller-k8s-tests-list),controller-k8s-tests/$(image))
+
+# Run all k8s tests
+.PHONY: controller-k8s-tests
+controller-k8s-tests: $(all-controller-k8s-tests)
+
+.PHONY: $(all-controller-k8s-tests)
+$(all-controller-k8s-tests): k3d controller-k8s-test-services-up
+		$(MAKE) push-local-registry -j6
+		$(eval testname = $(subst controller-k8s-tests/,,$@))
+		IMAGE_REPO=$(CI_BUILD_TAG) docker-compose -p $(CI_BUILD_TAG) --compatibility run --rm \
+			tests-controller-kubernetes ansible-playbook --skip-tags="skip-on-kubernetes,skip-on-kubernetes-controller" \
+			/ansible/tests/$(testname).yaml \
+			--extra-vars="@/ansible/tests/vars/test_vars.yaml" \
+			--extra-vars \
+			"$$(cat $$(./local-dev/k3d get-kubeconfig --name='$(K3D_NAME)') | \
+				jq -rcsR '{kubeconfig: .}')"
+
+# push command of our base images into the local registry
 push-local-registry-images = $(foreach image,$(base-images) $(task-images),[push-local-registry]-$(image))
 # tag and push all images
 .PHONY: push-local-registry
 push-local-registry: $(push-local-registry-images)
 # tag and push of each image
 .PHONY:
-	docker login -u admin -p admin 172.17.0.1:8084
+	docker login -u admin -p admin localhost:5000
 	$(push-local-registry-images)
 
 $(push-local-registry-images):
@@ -362,28 +373,9 @@ $(push-local-registry-images):
 		docker push localhost:5000/lagoon/$(image) | cat; \
 	fi
 
-# Define list of all tests
-all-openshift-tests-list:=	features-openshift \
-														node \
-														drupal-php72 \
-														drupal-php73 \
-														drupal-php74 \
-														drupal-postgres \
-														github \
-														gitlab \
-														bitbucket \
-														nginx \
-														elasticsearch \
-														active-standby-openshift \
-														node-mongodb
-all-openshift-tests = $(foreach image,$(all-openshift-tests-list),openshift-tests/$(image))
-
-.PHONY: openshift-tests
-openshift-tests: $(all-openshift-tests)
-
 # Run all tests
 .PHONY: tests
-tests: k8s-tests openshift-tests
+tests: controller-k8s-tests
 
 # Wait for Keycloak to be ready (before this no API calls will work)
 .PHONY: wait-for-keycloak
@@ -394,11 +386,8 @@ wait-for-keycloak:
 # Define a list of which Lagoon Services are needed for running any deployment testing
 main-test-services = broker logs2email logs2slack logs2rocketchat logs2microsoftteams api api-db api-redis keycloak keycloak-db ssh auth-server local-git local-api-data-watcher-pusher local-minio
 
-# Define a list of which Lagoon Services are needed for openshift testing
-openshift-test-services = openshiftremove openshiftbuilddeploy openshiftbuilddeploymonitor openshiftmisc tests-openshift local-dbaas-provider local-mongodb-dbaas-provider
-
-# Define a list of which Lagoon Services are needed for kubernetes testing
-k8s-test-services = controllerhandler tests-kubernetes local-registry local-dbaas-provider local-mongodb-dbaas-provider drush-alias
+# Define a list of which Lagoon Services are needed for controller kubernetes testing
+controller-k8s-test-services = controllerhandler tests-controller-kubernetes local-registry local-dbaas-provider local-postgresql-dbaas-provider local-mongodb-dbaas-provider drush-alias
 
 # List of Lagoon Services needed for webhook endpoint testing
 webhooks-test-services = webhook-handler webhooks2tasks backup-handler
@@ -410,10 +399,13 @@ drupal-test-services = drush-alias
 webhook-tests = github gitlab bitbucket
 
 # All Tests that use API endpoints
-api-tests = node features-openshift features-kubernetes nginx elasticsearch active-standby-openshift active-standby-kubernetes node-mongodb
+api-tests = node features-kubernetes nginx elasticsearch active-standby-kubernetes node-mongodb
 
 # All drupal tests
-drupal-tests = drupal-php72 drupal-php73 drupal-php74 drupal-postgres
+drupal-tests = drupal drupal-postgres
+
+# Other tests
+other-tests = dbaas singles images
 
 # These targets are used as dependencies to bring up containers in the right order.
 .PHONY: main-test-services-up
@@ -421,13 +413,9 @@ main-test-services-up: $(foreach image,$(main-test-services),build/$(image))
 	IMAGE_REPO=$(CI_BUILD_TAG) docker-compose -p $(CI_BUILD_TAG) --compatibility up -d $(main-test-services)
 	$(MAKE) wait-for-keycloak
 
-.PHONY: openshift-test-services-up
-openshift-test-services-up: main-test-services-up $(foreach image,$(openshift-test-services),build/$(image))
-	IMAGE_REPO=$(CI_BUILD_TAG) docker-compose -p $(CI_BUILD_TAG) --compatibility up -d $(openshift-test-services)
-
-.PHONY: k8s-test-services-up
-k8s-test-services-up: main-test-services-up $(foreach image,$(k8s-test-services),build/$(image))
-	IMAGE_REPO=$(CI_BUILD_TAG) docker-compose -p $(CI_BUILD_TAG) --compatibility up -d $(k8s-test-services)
+.PHONY: controller-k8s-test-services-up
+controller-k8s-test-services-up: main-test-services-up $(foreach image,$(controller-k8s-test-services),build/$(image))
+	IMAGE_REPO=$(CI_BUILD_TAG) docker-compose -p $(CI_BUILD_TAG) --compatibility up -d $(controller-k8s-test-services)
 
 .PHONY: drupaltest-services-up
 drupaltest-services-up: main-test-services-up $(foreach image,$(drupal-test-services),build/$(image))
@@ -442,54 +430,10 @@ local-registry-up: build/local-registry
 	IMAGE_REPO=$(CI_BUILD_TAG) docker-compose -p $(CI_BUILD_TAG) --compatibility up -d local-registry
 
 # broker-up is used to ensure the broker is running before the lagoon-builddeploy operator is installed
-# when running kubernetes tests
+# when running controller-kubernetes tests
 .PHONY: broker-up
 broker-up: build/broker
 	IMAGE_REPO=$(CI_BUILD_TAG) docker-compose -p $(CI_BUILD_TAG) --compatibility up -d broker
-
-openshift-run-api-tests = $(foreach image,$(api-tests),openshift-tests/$(image))
-.PHONY: $(openshift-run-api-tests)
-$(openshift-run-api-tests): minishift build/oc-build-deploy-dind openshift-test-services-up push-minishift
-		$(eval testname = $(subst openshift-tests/,,$@))
-		IMAGE_REPO=$(CI_BUILD_TAG) docker-compose -p $(CI_BUILD_TAG) --compatibility run --rm tests-openshift ansible-playbook /ansible/tests/$(testname).yaml
-
-openshift-run-drupal-tests = $(foreach image,$(drupal-tests),openshift-tests/$(image))
-.PHONY: $(openshift-run-drupal-tests)
-$(openshift-run-drupal-tests): minishift build/oc-build-deploy-dind openshift-test-services-up drupaltest-services-up push-minishift
-		$(eval testname = $(subst openshift-tests/,,$@))
-		IMAGE_REPO=$(CI_BUILD_TAG) docker-compose -p $(CI_BUILD_TAG) --compatibility run --rm tests-openshift ansible-playbook /ansible/tests/$(testname).yaml
-
-openshift-run-webhook-tests = $(foreach image,$(webhook-tests),openshift-tests/$(image))
-.PHONY: $(openshift-run-webhook-tests)
-$(openshift-run-webhook-tests): minishift build/oc-build-deploy-dind openshift-test-services-up webhooks-test-services-up push-minishift
-		$(eval testname = $(subst openshift-tests/,,$@))
-		IMAGE_REPO=$(CI_BUILD_TAG) docker-compose -p $(CI_BUILD_TAG) --compatibility run --rm tests-openshift ansible-playbook /ansible/tests/$(testname).yaml
-
-# push command of our base images into minishift
-push-minishift-images = $(foreach image,$(base-images),[push-minishift]-$(image))
-# tag and push all images
-.PHONY: push-minishift
-push-minishift: minishift/login-docker-registry $(push-minishift-images)
-# tag and push of each image
-.PHONY: $(push-minishift-images)
-$(push-minishift-images):
-	$(eval image = $(subst [push-minishift]-,,$@))
-	$(eval image = $(subst __,:,$(image)))
-	$(info pushing $(image) to minishift registry)
-	if docker inspect $(CI_BUILD_TAG)/$(image) > /dev/null 2>&1; then \
-		docker tag $(CI_BUILD_TAG)/$(image) $$(cat minishift):30000/lagoon/$(image) && \
-		docker push $$(cat minishift):30000/lagoon/$(image) | cat; \
-	fi
-
-push-docker-host-image: build/docker-host minishift/login-docker-registry
-	docker tag $(CI_BUILD_TAG)/docker-host $$(cat minishift):30000/lagoon/docker-host
-	docker push $$(cat minishift):30000/lagoon/docker-host | cat
-
-lagoon-kickstart: $(foreach image,$(deployment-test-services-rest),build/$(image))
-	IMAGE_REPO=$(CI_BUILD_TAG) CI=false docker-compose -p $(CI_BUILD_TAG) --compatibility up -d $(deployment-test-services-rest)
-	sleep 90
-	curl -X POST -H "Content-Type: application/json" --data 'mutation { deployEnvironmentBranch(input: { project: { name: "lagoon" }, branchName: "master" } )}' http://localhost:3000/graphql
-	make logs
 
 #######
 ####### Publishing Images
@@ -627,123 +571,6 @@ down:
 kill:
 	docker ps --format "{{.Names}}" | grep lagoon | xargs -t -r -n1 docker rm -f -v
 
-.PHONY: openshift
-openshift:
-	$(info the openshift command has been renamed to minishift)
-
-# Start Local OpenShift Cluster within a docker machine with a given name, also check if the IP
-# that has been assigned to the machine is not the default one and then replace the IP in the yaml files with it
-minishift: local-dev/minishift/minishift
-	$(info starting minishift $(MINISHIFT_VERSION) with name $(CI_BUILD_TAG))
-ifeq ($(ARCH), darwin)
-	./local-dev/minishift/minishift --profile $(CI_BUILD_TAG) start --docker-opt "bip=192.168.89.1/24" --host-only-cidr "192.168.42.1/24" --cpus $(MINISHIFT_CPUS) --memory $(MINISHIFT_MEMORY) --disk-size $(MINISHIFT_DISK_SIZE) --vm-driver virtualbox --openshift-version="$(OPENSHIFT_VERSION)"
-else
-	./local-dev/minishift/minishift --profile $(CI_BUILD_TAG) start --docker-opt "bip=192.168.89.1/24" --cpus $(MINISHIFT_CPUS) --memory $(MINISHIFT_MEMORY) --disk-size $(MINISHIFT_DISK_SIZE) --openshift-version="$(OPENSHIFT_VERSION)"
-endif
-	./local-dev/minishift/minishift --profile $(CI_BUILD_TAG) openshift component add service-catalog
-ifeq ($(ARCH), darwin)
-	@OPENSHIFT_MACHINE_IP=$$(./local-dev/minishift/minishift --profile $(CI_BUILD_TAG) ip); \
-	echo "replacing IP in local-dev/api-data/02-populate-api-data-openshift.gql and docker-compose.yaml with the IP '$$OPENSHIFT_MACHINE_IP'"; \
-	sed -i '' -E "s/192.168\.[0-9]{1,3}\.([2-9]|[0-9]{2,3})/$${OPENSHIFT_MACHINE_IP}/g" local-dev/api-data/02-populate-api-data-openshift.gql docker-compose.yaml;
-else
-	@OPENSHIFT_MACHINE_IP=$$(./local-dev/minishift/minishift --profile $(CI_BUILD_TAG) ip); \
-	echo "replacing IP in local-dev/api-data/02-populate-api-data-openshift.gql and docker-compose.yaml with the IP '$$OPENSHIFT_MACHINE_IP'"; \
-	sed -i "s/192.168\.[0-9]\{1,3\}\.\([2-9]\|[0-9]\{2,3\}\)/$${OPENSHIFT_MACHINE_IP}/g" local-dev/api-data/02-populate-api-data-openshift.gql docker-compose.yaml;
-endif
-	./local-dev/minishift/minishift --profile $(CI_BUILD_TAG) ssh --  '/bin/sh -c "sudo sysctl -w vm.max_map_count=262144"'
-	eval $$(./local-dev/minishift/minishift --profile $(CI_BUILD_TAG) oc-env); \
-	oc login -u system:admin; \
-	bash -c "echo '{\"apiVersion\":\"v1\",\"kind\":\"Service\",\"metadata\":{\"name\":\"docker-registry-external\"},\"spec\":{\"ports\":[{\"port\":5000,\"protocol\":\"TCP\",\"targetPort\":5000,\"nodePort\":30000}],\"selector\":{\"docker-registry\":\"default\"},\"sessionAffinity\":\"None\",\"type\":\"NodePort\"}}' | oc --context="myproject/$$(./local-dev/minishift/minishift --profile $(CI_BUILD_TAG) ip | sed 's/\./-/g'):8443/system:admin" create -n default -f -"; \
-	oc --context="myproject/$$(./local-dev/minishift/minishift --profile $(CI_BUILD_TAG) ip | sed 's/\./-/g'):8443/system:admin" adm policy add-cluster-role-to-user cluster-admin system:anonymous; \
-	oc --context="myproject/$$(./local-dev/minishift/minishift --profile $(CI_BUILD_TAG) ip | sed 's/\./-/g'):8443/system:admin" adm policy add-cluster-role-to-user cluster-admin developer;
-	@echo "$$(./local-dev/minishift/minishift --profile $(CI_BUILD_TAG) ip)" > $@
-	@echo "wait 60secs in order to give openshift time to setup it's registry"
-	sleep 60
-	eval $$(./local-dev/minishift/minishift --profile $(CI_BUILD_TAG) oc-env); \
-	for i in {10..30}; do oc --context="myproject/$$(./local-dev/minishift/minishift --profile $(CI_BUILD_TAG) ip | sed 's/\./-/g'):8443/system:admin" patch pv pv00$${i} -p '{"spec":{"storageClassName":"bulk"}}'; done;
-	$(MAKE) minishift/configure-lagoon-local push-docker-host-image
-
-.PHONY: minishift/login-docker-registry
-minishift/login-docker-registry: minishift
-	eval $$(./local-dev/minishift/minishift --profile $(CI_BUILD_TAG) oc-env); \
-	oc login --insecure-skip-tls-verify -u developer -p developer $$(cat minishift):8443; \
-	oc whoami -t | docker login --username developer --password-stdin $$(cat minishift):30000
-
-# Configures an openshift to use with Lagoon
-.PHONY: openshift-lagoon-setup
-openshift-lagoon-setup:
-# Only use the minishift provided oc if we don't have one yet (allows system engineers to use their own oc)
-	if ! which oc; then eval $$(./local-dev/minishift/minishift --profile $(CI_BUILD_TAG) oc-env); fi; \
-	oc -n default set env dc/router -e ROUTER_LOG_LEVEL=info -e ROUTER_SYSLOG_ADDRESS=router-logs.lagoon.svc:5141; \
-	oc new-project lagoon; \
-	oc adm pod-network make-projects-global lagoon; \
-	oc -n lagoon create serviceaccount openshiftbuilddeploy; \
-	oc -n lagoon policy add-role-to-user admin -z openshiftbuilddeploy; \
-	oc -n lagoon create -f openshift-setup/clusterrole-openshiftbuilddeploy.yaml; \
-	oc -n lagoon adm policy add-cluster-role-to-user openshiftbuilddeploy -z openshiftbuilddeploy; \
-	oc -n lagoon create -f openshift-setup/priorityclasses.yaml; \
-	oc -n lagoon create -f openshift-setup/shared-resource-viewer.yaml; \
-	oc -n lagoon create -f openshift-setup/policybinding.yaml | oc -n lagoon create -f openshift-setup/rolebinding.yaml; \
-	oc -n lagoon create serviceaccount docker-host; \
-	oc -n lagoon adm policy add-scc-to-user privileged -z docker-host; \
-	oc -n lagoon policy add-role-to-user edit -z docker-host; \
-	oc -n lagoon adm policy add-cluster-role-to-user daemonset-admin -z lagoon-deployer; \
-	oc -n lagoon create serviceaccount lagoon-deployer; \
-	oc -n lagoon policy add-role-to-user edit -z lagoon-deployer; \
-	oc -n lagoon create -f openshift-setup/clusterrole-daemonset-admin.yaml; \
-	oc -n lagoon adm policy add-cluster-role-to-user daemonset-admin -z lagoon-deployer; \
-	bash -c "oc process -n lagoon -f openshift-setup/docker-host.yaml | oc -n lagoon apply -f -"; \
-	oc -n lagoon create -f openshift-setup/dbaas-roles.yaml; \
-	oc -n dbaas-operator-system create -f openshift-setup/dbaas-operator.yaml; \
-	oc -n lagoon create -f openshift-setup/dbaas-providers.yaml; \
-	oc -n lagoon create -f openshift-setup/dioscuri-roles.yaml; \
-	oc -n dioscuri-controller create -f openshift-setup/dioscuri-operator.yaml; \
-	echo -e "\n\nAll Setup, use this token as described in the Lagoon Install Documentation:" \
-	oc -n lagoon serviceaccounts get-token openshiftbuilddeploy
-
-
-# This calls the regular openshift-lagoon-setup first, which configures our minishift like we configure a real openshift for lagoon.
-# It then overwrites the docker-host deploymentconfig and cronjobs to use our own just-built docker-host images.
-.PHONY: minishift/configure-lagoon-local
-minishift/configure-lagoon-local: openshift-lagoon-setup
-	eval $$(./local-dev/minishift/minishift --profile $(CI_BUILD_TAG) oc-env); \
-	bash -c "oc process -n lagoon -p SERVICE_IMAGE=172.30.1.1:5000/lagoon/docker-host:latest -p REPOSITORY_TO_UPDATE=lagoon -f services/docker-host/docker-host.yaml | oc -n lagoon apply -f -"; \
-	oc -n default set env dc/router -e ROUTER_LOG_LEVEL=info -e ROUTER_SYSLOG_ADDRESS=172.17.0.1:5140;
-
-# Stop MiniShift
-.PHONY: minishift/stop
-minishift/stop: local-dev/minishift/minishift
-	./local-dev/minishift/minishift --profile $(CI_BUILD_TAG) delete --force
-	rm -f minishift
-
-# Stop All MiniShifts
-.PHONY: minishift/stopall
-minishift/stopall: local-dev/minishift/minishift
-	for profile in $$(./local-dev/minishift/minishift profile list | awk '{ print $$2 }'); do ./local-dev/minishift/minishift --profile $$profile delete --force; done
-	rm -f minishift
-
-# Stop MiniShift, remove downloaded minishift
-.PHONY: minishift/clean
-minishift/clean: minishift/stop
-	rm -rf ./local-dev/minishift/minishift
-
-# Stop All Minishifts, remove downloaded minishift
-.PHONY: openshift/cleanall
-minishift/cleanall: minishift/stopall
-	rm -rf ./local-dev/minishift/minishift
-
-# Symlink the installed minishift client if the correct version is already
-# installed, otherwise downloads it.
-local-dev/minishift/minishift:
-	@mkdir -p ./local-dev/minishift
-ifeq ($(MINISHIFT_VERSION), $(shell minishift version 2>/dev/null | sed -E 's/^minishift v([0-9.]+).*/\1/'))
-	$(info linking local minishift version $(MINISHIFT_VERSION))
-	ln -s $(shell command -v minishift) ./local-dev/minishift/minishift
-else
-	$(info downloading minishift version $(MINISHIFT_VERSION) for $(ARCH))
-	curl -L https://github.com/minishift/minishift/releases/download/v$(MINISHIFT_VERSION)/minishift-$(MINISHIFT_VERSION)-$(ARCH)-amd64.tgz | tar xzC local-dev/minishift --strip-components=1
-endif
-
 # Symlink the installed k3d client if the correct version is already
 # installed, otherwise downloads it.
 local-dev/k3d:
@@ -795,22 +622,22 @@ k3d: local-dev/k3d local-dev/kubectl local-dev/helm build/docker-host
 ifeq ($(ARCH), darwin)
 	if ! ifconfig lo0 | grep $$(docker network inspect bridge --format='{{(index .IPAM.Config 0).Gateway}}') -q; then sudo ifconfig lo0 alias $$(docker network inspect bridge --format='{{(index .IPAM.Config 0).Gateway}}'); fi
 endif
-	./local-dev/k3d create --wait 0 --publish 18080:80 \
-		--publish 18443:443 \
-		--api-port 16643 \
-		--name $(K3D_NAME) \
-		--image docker.io/rancher/k3s:$(K3S_VERSION) \
-		--volume $$PWD/local-dev/k3d-registries.yaml:/etc/rancher/k3s/registries.yaml \
-		$(K3D_BTRFS_VOLUME) \
-		-x --no-deploy=traefik
+	# ./local-dev/k3d create --wait 0 --publish 18080:80 \
+	# 	--publish 18443:443 \
+	# 	--api-port 16643 \
+	# 	--name $(K3D_NAME) \
+	# 	--image docker.io/rancher/k3s:$(K3S_VERSION) \
+	# 	--volume $$PWD/local-dev/k3d-registries.yaml:/etc/rancher/k3s/registries.yaml \
+	# 	$(K3D_BTRFS_VOLUME) \
+	# 	-x --no-deploy=traefik
 	echo "$(K3D_NAME)" > $@
 	export KUBECONFIG="$$(./local-dev/k3d get-kubeconfig --name='$(K3D_NAME)')"; \
 	local-dev/kubectl --kubeconfig="$$(./local-dev/k3d get-kubeconfig --name='$(K3D_NAME)')" apply -f $$PWD/local-dev/k3d-storageclass-bulk.yaml; \
 	docker tag $(CI_BUILD_TAG)/docker-host localhost:5000/lagoon/docker-host; \
 	docker push localhost:5000/lagoon/docker-host; \
 	local-dev/kubectl --kubeconfig="$$(./local-dev/k3d get-kubeconfig --name='$(K3D_NAME)')" --context='$(K3D_NAME)' create namespace nginx-ingress; \
-	local-dev/helm/helm --kubeconfig="$$(./local-dev/k3d get-kubeconfig --name='$(K3D_NAME)')" --kube-context='$(K3D_NAME)' repo add stable https://charts.helm.sh/stable; \
-	local-dev/helm/helm --kubeconfig="$$(./local-dev/k3d get-kubeconfig --name='$(K3D_NAME)')" --kube-context='$(K3D_NAME)' upgrade --install -n nginx-ingress nginx stable/nginx-ingress; \
+	local-dev/helm --kubeconfig="$$(./local-dev/k3d get-kubeconfig --name='$(K3D_NAME)')" --kube-context='$(K3D_NAME)' repo add stable https://charts.helm.sh/stable; \
+	local-dev/helm --kubeconfig="$$(./local-dev/k3d get-kubeconfig --name='$(K3D_NAME)')" --kube-context='$(K3D_NAME)' upgrade --install -n nginx-ingress nginx stable/nginx-ingress; \
 	local-dev/kubectl --kubeconfig="$$(./local-dev/k3d get-kubeconfig --name='$(K3D_NAME)')" --context='$(K3D_NAME)' create namespace k8up; \
 	local-dev/helm --kubeconfig="$$(./local-dev/k3d get-kubeconfig --name='$(K3D_NAME)')" --kube-context='$(K3D_NAME)' repo add appuio https://charts.appuio.ch; \
 	local-dev/helm --kubeconfig="$$(./local-dev/k3d get-kubeconfig --name='$(K3D_NAME)')" --kube-context='$(K3D_NAME)' upgrade --install -n k8up k8up appuio/k8up; \
@@ -821,37 +648,37 @@ endif
 	local-dev/helm --kubeconfig="$$(./local-dev/k3d get-kubeconfig --name='$(K3D_NAME)')" --kube-context='$(K3D_NAME)' repo add dbaas-operator https://raw.githubusercontent.com/amazeeio/dbaas-operator/main/charts ; \
 	local-dev/helm --kubeconfig="$$(./local-dev/k3d get-kubeconfig --name='$(K3D_NAME)')" --kube-context='$(K3D_NAME)' upgrade --install -n dbaas-operator dbaas-operator dbaas-operator/dbaas-operator ; \
 	local-dev/helm --kubeconfig="$$(./local-dev/k3d get-kubeconfig --name='$(K3D_NAME)')" --kube-context='$(K3D_NAME)' upgrade --install -n dbaas-operator mariadbprovider dbaas-operator/mariadbprovider -f local-dev/helm-values-mariadbprovider.yml ; \
+	local-dev/helm --kubeconfig="$$(./local-dev/k3d get-kubeconfig --name='$(K3D_NAME)')" --kube-context='$(K3D_NAME)' upgrade --install -n dbaas-operator postgresqlprovider dbaas-operator/postgresqlprovider -f local-dev/helm-values-postgresqlprovider.yml ; \
 	local-dev/helm --kubeconfig="$$(./local-dev/k3d get-kubeconfig --name='$(K3D_NAME)')" --kube-context='$(K3D_NAME)' upgrade --install -n dbaas-operator mongodbprovider dbaas-operator/mongodbprovider -f local-dev/helm-values-mongodbprovider.yml ; \
-	local-dev/kubectl --kubeconfig="$$(./local-dev/k3d get-kubeconfig --name='$(K3D_NAME)')" --context='$(K3D_NAME)' create namespace harbor; \
-	local-dev/helm --kubeconfig="$$(./local-dev/k3d get-kubeconfig --name='$(K3D_NAME)')" --kube-context='$(K3D_NAME)' repo add harbor https://helm.goharbor.io ; \
-	local-dev/helm --kubeconfig="$$(./local-dev/k3d get-kubeconfig --name='$(K3D_NAME)')" --kube-context='$(K3D_NAME)' upgrade --install -n harbor harbor harbor/harbor -f local-dev/helm-values-harbor.yml ; \
 	local-dev/kubectl --kubeconfig="$$(./local-dev/k3d get-kubeconfig --name='$(K3D_NAME)')" --context='$(K3D_NAME)' create namespace lagoon-builddeploy; \
-	local-dev/helm --kubeconfig="$$(./local-dev/k3d get-kubeconfig --name='$(K3D_NAME)')" --kube-context='$(K3D_NAME)' repo add lagoon-builddeploy https://raw.githubusercontent.com/amazeeio/lagoon-kbd/main/charts ; \
-	local-dev/helm --kubeconfig="$$(./local-dev/k3d get-kubeconfig --name='$(K3D_NAME)')" --kube-context='$(K3D_NAME)' upgrade --install -n lagoon-builddeploy lagoon-builddeploy lagoon-builddeploy/lagoon-builddeploy \
-		--set vars.lagoonTargetName=ci-local-control-k8s \
-		--set vars.rabbitPassword=guest \
-		--set vars.rabbitUsername=guest \
-		--set vars.rabbitHostname=172.17.0.1:5672; \
+	local-dev/helm --kubeconfig="$$(./local-dev/k3d get-kubeconfig --name='$(K3D_NAME)')" --kube-context='$(K3D_NAME)' repo add lagoon-charts https://uselagoon.github.io/lagoon-charts/ ; \
+	local-dev/helm --kubeconfig="$$(./local-dev/k3d get-kubeconfig --name='$(K3D_NAME)')" --kube-context='$(K3D_NAME)' upgrade --install -n lagoon-builddeploy lagoon-builddeploy lagoon-charts/lagoon-build-deploy \
+		--set "lagoonTargetName=ci-local-control-k8s" \
+		--set "rabbitMQPassword=guest" \
+		--set "rabbitMQUsername=guest" \
+		--set "rabbitMQHostname=172.17.0.1:5672" \
+		--set "overrideBuildDeployImage=172.17.0.1:5000/lagoon/kubectl-build-deploy-dind:latest"; \
 	local-dev/kubectl --kubeconfig="$$(./local-dev/k3d get-kubeconfig --name='$(K3D_NAME)')" --context='$(K3D_NAME)' create namespace lagoon; \
 	local-dev/helm --kubeconfig="$$(./local-dev/k3d get-kubeconfig --name='$(K3D_NAME)')" --kube-context='$(K3D_NAME)' repo add lagoon https://uselagoon.github.io/lagoon-charts/; \
-	local-dev/helm/helm --kubeconfig="$$(./local-dev/k3d get-kubeconfig --name='$(K3D_NAME)')" --kube-context='$(K3D_NAME)' upgrade --install -n lagoon lagoon-remote lagoon/lagoon-remote \
+	local-dev/helm --kubeconfig="$$(./local-dev/k3d get-kubeconfig --name='$(K3D_NAME)')" --kube-context='$(K3D_NAME)' upgrade --install -n lagoon lagoon-remote lagoon/lagoon-remote \
 		--set dioscuri.enabled=false \
 		--set dockerHost.image.repository=172.17.0.1:5000/lagoon/docker-host \
 		--set dockerHost.image.tag=latest \
 		--set dockerHost.registry=172.17.0.1:5000; \
-	local-dev/kubectl --kubeconfig="$$(./local-dev/k3d get-kubeconfig --name='$(K3D_NAME)')" --context='$(K3D_NAME)' -n lagoon rollout status deployment lagoon-remote-docker-host -w;
+	local-dev/kubectl --kubeconfig="$$(./local-dev/k3d get-kubeconfig --name='$(K3D_NAME)')" --context='$(K3D_NAME)' -n lagoon rollout status deployment lagoon-remote-docker-host -w; \
+	local-dev/helm list --all --all-namespaces;
 ifeq ($(ARCH), darwin)
 	export KUBECONFIG="$$(./local-dev/k3d get-kubeconfig --name='$(K3D_NAME)')"; \
 	KUBERNETESBUILDDEPLOY_TOKEN=$$(local-dev/kubectl --kubeconfig="$$(./local-dev/k3d get-kubeconfig --name='$(K3D_NAME)')" --context='$(K3D_NAME)' -n lagoon describe secret $$(local-dev/kubectl --kubeconfig="$$(./local-dev/k3d get-kubeconfig --name='$(K3D_NAME)')" --context='$(K3D_NAME)' -n lagoon get secret | grep lagoon-remote-kubernetes-build-deploy-token | awk '{print $$1}') | grep token: | awk '{print $$2}' | tr -d '\n'); \
-	sed -i '' -e "s/\".*\" # make-kubernetes-token/\"$${KUBERNETESBUILDDEPLOY_TOKEN}\" # make-kubernetes-token/g" local-dev/api-data/03-populate-api-data-kubernetes.gql; \
+	sed -i '' -e "s/\".*\" # make-kubernetes-token/\"$${KUBERNETESBUILDDEPLOY_TOKEN}\" # make-kubernetes-token/g" local-dev/api-data-watcher-pusher/api-data/03-populate-api-data-kubernetes.gql; \
 	DOCKER_IP="$$(docker network inspect bridge --format='{{(index .IPAM.Config 0).Gateway}}')"; \
-	sed -i '' -e "s/172\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}/$${DOCKER_IP}/g" local-dev/api-data/03-populate-api-data-kubernetes.gql docker-compose.yaml;
+	sed -i '' -e "s/172\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}/$${DOCKER_IP}/g" local-dev/api-data-watcher-pusher/api-data/03-populate-api-data-kubernetes.gql docker-compose.yaml;
 else
 	export KUBECONFIG="$$(./local-dev/k3d get-kubeconfig --name='$(K3D_NAME)')"; \
 	KUBERNETESBUILDDEPLOY_TOKEN=$$(local-dev/kubectl --kubeconfig="$$(./local-dev/k3d get-kubeconfig --name='$(K3D_NAME)')" --context='$(K3D_NAME)' -n lagoon describe secret $$(local-dev/kubectl --kubeconfig="$$(./local-dev/k3d get-kubeconfig --name='$(K3D_NAME)')" --context='$(K3D_NAME)' -n lagoon get secret | grep lagoon-remote-kubernetes-build-deploy-token | awk '{print $$1}') | grep token: | awk '{print $$2}' | tr -d '\n'); \
-	sed -i "s/\".*\" # make-kubernetes-token/\"$${KUBERNETESBUILDDEPLOY_TOKEN}\" # make-kubernetes-token/g" local-dev/api-data/03-populate-api-data-kubernetes.gql; \
+	sed -i "s/\".*\" # make-kubernetes-token/\"$${KUBERNETESBUILDDEPLOY_TOKEN}\" # make-kubernetes-token/g" local-dev/api-data-watcher-pusher/api-data/03-populate-api-data-kubernetes.gql; \
 	DOCKER_IP="$$(docker network inspect bridge --format='{{(index .IPAM.Config 0).Gateway}}')"; \
-	sed -i "s/172\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}/$${DOCKER_IP}/g" local-dev/api-data/03-populate-api-data-kubernetes.gql docker-compose.yaml;
+	sed -i "s/172\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}/$${DOCKER_IP}/g" local-dev/api-data-watcher-pusher/api-data/03-populate-api-data-kubernetes.gql docker-compose.yaml;
 endif
 	$(MAKE) push-kubectl-build-deploy-dind
 
@@ -914,7 +741,7 @@ k3d/clean: k3d/stop
 k3d/cleanall: k3d/stopall
 	rm -rf ./local-dev/k3d
 
-# Configures an openshift to use with Lagoon
+# Configures lagoon-remote k8s to use with Lagoon
 .PHONY: kubernetes-lagoon-setup
 kubernetes-lagoon-setup:
 	kubectl create namespace lagoon; \
@@ -926,13 +753,6 @@ kubernetes-lagoon-setup:
 .PHONY: kubernetes-get-kubernetesbuilddeploy-token
 kubernetes-get-kubernetesbuilddeploy-token:
 	kubectl -n lagoon describe secret $$(kubectl -n lagoon get secret | grep kubernetes-build-deploy | awk '{print $$1}') | grep token: | awk '{print $$2}'
-
-.PHONY: rebuild-push-oc-build-deploy-dind
-rebuild-push-oc-build-deploy-dind:
-	rm -rf build/oc-build-deploy-dind
-	$(MAKE) minishift/login-docker-registry build/oc-build-deploy-dind [push-minishift]-oc-build-deploy-dind
-
-
 
 .PHONY: ui-development
 ui-development: build/api build/api-db build/local-api-data-watcher-pusher build/ui build/keycloak build/keycloak-db build/broker build/broker-single build/api-redis
