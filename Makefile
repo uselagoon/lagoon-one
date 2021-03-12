@@ -1054,6 +1054,7 @@ kind/test: kind/cluster helm/repos $(addprefix local-dev/,$(KIND_TOOLS)) $(addpr
 			OVERRIDE_BUILD_DEPLOY_CONTROLLER_IMAGE_REPOSITORY=smlx/lagoon-builddeploy \
 			OVERRIDE_BUILD_DEPLOY_CONTROLLER_IMAGETAG=feature-flags \
 			IMAGE_REGISTRY=$$IMAGE_REGISTRY \
+			LAGOON_FEATURE_FLAG_DEFAULT_ISOLATION_NETWORK_POLICY=enabled \
 		&& sleep 30 \
 		&& docker run --rm --network host --name ct-$(CI_BUILD_TAG) \
 			--volume "$$(pwd)/test-suite-run.ct.yaml:/etc/ct/ct.yaml" \
