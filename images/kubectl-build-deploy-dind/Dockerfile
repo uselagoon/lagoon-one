@@ -5,8 +5,9 @@ FROM ${IMAGE_REPO:-lagoon}/kubectl
 RUN rm -rf /root && ln -s /home /root
 ENV LAGOON=kubectl-build-deploy-dind
 
-RUN  mkdir -p /kubectl-build-deploy/git
-RUN  mkdir -p /kubectl-build-deploy/lagoon
+RUN  mkdir -p /kubectl-build-deploy/git \
+       /kubectl-build-deploy/lagoon \
+       && apk --no-cache add moreutils
 
 WORKDIR /kubectl-build-deploy/git
 
@@ -20,4 +21,4 @@ COPY helmcharts  /kubectl-build-deploy/helmcharts
 
 ENV IMAGECACHE_REGISTRY=imagecache.amazeeio.cloud
 
-CMD ["/kubectl-build-deploy/build-deploy.sh"]
+CMD ["sh", "-c", "/kubectl-build-deploy/build-deploy.sh | ts '[%Y-%m-%d %H:%M:%S]'"]
