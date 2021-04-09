@@ -616,6 +616,7 @@ local/install-lagoon:
 	cd $(CHARTSDIR) \
 		&& export KUBECONFIG=$(KUBECONFIG) \
 		&& export IMAGE_REGISTRY=$(IMAGE_REGISTRY) \
+		&& $(MAKE) install-nfs-server-provisioner \
 		&& $(MAKE) install-lagoon IMAGE_TAG=$(SAFE_BRANCH_NAME) \
 			HELM=$(HELM) KUBECTL=$(KUBECTL) JQ=$(JQ) \
 			OVERRIDE_BUILD_DEPLOY_DIND_IMAGE=$$IMAGE_REGISTRY/kubectl-build-deploy-dind:$(SAFE_BRANCH_NAME) \
@@ -636,13 +637,17 @@ local/test:
 		&& $(MAKE) install-tests TESTS=$(TESTS) IMAGE_TAG=$(SAFE_BRANCH_NAME) \
 			HELM=$(HELM) KUBECTL=$(KUBECTL) JQ=$(JQ) \
 			IMAGE_REGISTRY=$$IMAGE_REGISTRY \
-		&& docker run --rm --network host --name ct-$(CI_BUILD_TAG) \
-			--volume "$$(pwd)/test-suite-run.ct.yaml:/etc/ct/ct.yaml" \
-			--volume "$$(pwd):/workdir" \
-			--volume "$$KUBECONFIG:/root/.kube/config" \
-			--workdir /workdir \
-			"quay.io/helmpack/chart-testing:v3.3.1" \
-			ct install
+		&& $(MAKE) run-tests
+		# && docker run --rm --network host --name ct-$(CI_BUILD_TAG) \
+		# 	--volume "$$(pwd)/test-suite-run.ct.yaml:/etc/ct/ct.yaml" \
+		# 	--volume "$$(pwd):/workdir" \
+		# 	--volume "$$KUBECONFIG:/root/.kube/config" \
+		# 	--workdir /workdir \
+		# 	"quay.io/helmpack/chart-testing:v3.3.1" \
+		# 	ct install
+
+.PHONY: local/e2e-test
+local/e2e-test: local/test local/install-lagoon local/install-registry local/install-calico local/lagoon-charts local/kind-cluster
 
 # local/dev can only be run once a cluster is up and running - it doesn't rebuild the cluster at all, just pushes the built images
 # into the image registry and reinstalls the lagoon-core helm chart.

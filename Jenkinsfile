@@ -57,7 +57,7 @@ pipeline {
     }
     stage ('run test suite') {
       steps {
-        sh script: "make -j$NPROC kind/test BRANCH_NAME=${SAFEBRANCH_NAME}", label: "Running tests on kind cluster"
+        sh script: "make -j$NPROC local/e2e-test BRANCH_NAME=${SAFEBRANCH_NAME}", label: "Running tests on kind cluster"
       }
     }
     stage ('push images to testlagoon/* with :latest tag') {
