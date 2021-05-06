@@ -55,37 +55,38 @@ pipeline {
         sh script: "make -O -j$NPROC publish-testlagoon-baseimages publish-testlagoon-serviceimages publish-testlagoon-taskimages BRANCH_NAME=${SAFEBRANCH_NAME}", label: "Publishing built images"
       }
     }
-    parallel (
-      '1 tests': {
-        stage ('run test suite') {
-          steps {
-            sh script: "make -j$NPROC kind/test BRANCH_NAME=${SAFEBRANCH_NAME}", label: "Running tests on kind cluster"
+    stage ('build cluster and test') {
+      parallel {
+        stage ('cluster') {
+          stage ('run test suite') {
+            steps {
+              sh script: "make -j$NPROC kind/test BRANCH_NAME=${SAFEBRANCH_NAME}", label: "Running tests on kind cluster"
+            }
+          }
+          stage ('collect kubectl logs') {
+            steps {
+              sh script: "make kind/logs-dump"
+              sh script: "cat logs.txt", label: "Display kubectl logs"
+            }
+          }
+          stage ('cleanup') {
+            cleanup()
           }
         }
-        stage ('collect kubectl logs') {
-          steps {
-            sh script: "make kind/logs-dump"
-          }
-        }
-        stage ('cleanup') {
-          cleanup()
-        }
-      },
-      '2 collect logs': {
         stage ('collect stern logs') {
           steps {
             sh script: "make kind/logs-stern"
+            sh script: "cat logs2.txt", label: "Display stern logs"
           }
         }
       }
-    )
+    }
     stage ('show logs') {
       steps {
         sh script: "cat logs.txt", label: "Display kubectl logs"
         sh script: "cat logs2.txt", label: "Display stern logs"
       }
     }
-
     stage ('push images to testlagoon/* with :latest tag') {
       when {
         branch 'main'
