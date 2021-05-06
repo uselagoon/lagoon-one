@@ -58,19 +58,23 @@ pipeline {
     stage ('build cluster and test') {
       parallel {
         stage ('cluster') {
-          stage ('run test suite') {
-            steps {
-              sh script: "make -j$NPROC kind/test BRANCH_NAME=${SAFEBRANCH_NAME}", label: "Running tests on kind cluster"
+          stages {
+            stage ('run test suite') {
+              steps {
+                sh script: "make -j$NPROC kind/test BRANCH_NAME=${SAFEBRANCH_NAME}", label: "Running tests on kind cluster"
+              }
             }
-          }
-          stage ('collect kubectl logs') {
-            steps {
-              sh script: "make kind/logs-dump"
-              sh script: "cat logs.txt", label: "Display kubectl logs"
+            stage ('collect kubectl logs') {
+              steps {
+                sh script: "make kind/logs-dump"
+                sh script: "cat logs.txt", label: "Display kubectl logs"
+              }
             }
-          }
-          stage ('cleanup') {
-            cleanup()
+            stage ('cleanup') {
+              steps {
+                cleanup()
+              }
+            }
           }
         }
         stage ('collect stern logs') {
