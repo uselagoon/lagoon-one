@@ -55,11 +55,39 @@ pipeline {
         sh script: "make -O -j$NPROC publish-testlagoon-baseimages publish-testlagoon-serviceimages publish-testlagoon-taskimages BRANCH_NAME=${SAFEBRANCH_NAME}", label: "Publishing built images"
       }
     }
-    stage ('run test suite') {
+    try {
+      parallel (
+        '1 tests': {
+          stage ('run test suite') {
+            steps {
+              sh script: "make -j$NPROC kind/test BRANCH_NAME=${SAFEBRANCH_NAME}", label: "Running tests on kind cluster"
+            }
+          }
+          stage ('collect kubectl logs') {
+            steps {
+              sh script: "make kind/logs-dump"
+            }
+          }
+          stage ('cleanup') {
+            cleanup()
+          }
+        },
+        '2 collect logs': {
+          stage ('collect stern logs') {
+            steps {
+              sh script: "make kind/logs-stern"
+            }
+          }
+        }
+      )
+    }
+    stage ('show logs') {
       steps {
-        sh script: "make -j$NPROC kind/test BRANCH_NAME=${SAFEBRANCH_NAME}", label: "Running tests on kind cluster"
+        sh script: "cat logs.txt", label: "Display kubectl logs"
+        sh script: "cat logs2.txt", label: "Display stern logs"
       }
     }
+
     stage ('push images to testlagoon/* with :latest tag') {
       when {
         branch 'main'
@@ -100,9 +128,19 @@ pipeline {
     }
   }
 
+def cleanup() {
+  try {
+    sh "make clean kind/clean"
+  } catch (error) {
+    echo "cleanup failed, ignoring this."
+  }
+}
+
+
+
   post {
     always {
-      sh "make clean kind/clean"
+      cleanup()
     }
     success {
       notifySlack('SUCCESS')

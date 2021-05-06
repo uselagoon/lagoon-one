@@ -95,6 +95,8 @@ SAFE_BRANCH_NAME := $(shell echo $(BRANCH_NAME) | sed -E 's:/:_:g')
 # Init the file that is used to hold the image tag cross-reference table
 $(shell >build.txt)
 $(shell >scan.txt)
+$(shell >logs.txt)
+$(shell >logs2.txt)
 
 #######
 ####### Functions
@@ -946,6 +948,7 @@ api-development: build/api build/api-db build/local-api-data-watcher-pusher buil
 
 KIND_VERSION = v0.10.0
 GOJQ_VERSION = v0.11.2
+STERN_VERSION = 1.16.0
 KIND_IMAGE = kindest/node:v1.20.2@sha256:8f7ea6e7642c0da54f04a7ee10431549c0257315b3a634f6ef2fecaaedb19bab
 TESTS = [api,features-kubernetes,nginx,drupal-php73,drupal-php74,drupal-postgres,python,gitlab,github,bitbucket,node-mongodb,elasticsearch]
 CHARTS_TREEISH = main
@@ -958,6 +961,16 @@ else
 	$(info downloading kind version $(KIND_VERSION) for $(ARCH))
 	curl -sSLo local-dev/kind https://github.com/kubernetes-sigs/kind/releases/download/$(KIND_VERSION)/kind-$(ARCH)-amd64
 	chmod a+x local-dev/kind
+endif
+
+local-dev/stern:
+ifeq ($(STERN_VERSION), $(shell stern -v  2>/dev/null | sed -nE 's/version: ([0-9.]+).*/\1/p'))
+	$(info linking local stern version $(STERN_VERSION))
+	ln -s $(shell command -v stern) ./local-dev/stern
+else
+	$(info downloading stern version $(STERN_VERSION) for $(ARCH))
+	curl -sSL https://github.com/stern/stern/releases/download/v$(STERN_VERSION)/stern_$(STERN_VERSION)_$(ARCH)_amd64.tar.gz | tar -xzC local-dev --strip-components=1 stern_$(STERN_VERSION)_$(ARCH)_amd64/stern
+	chmod a+x local-dev/stern
 endif
 
 local-dev/jq:
@@ -1148,6 +1161,22 @@ kind/retest:
 			--workdir /workdir \
 			"quay.io/helmpack/chart-testing:v3.3.1" \
 			ct install
+
+.PHONY: kind/logs-live
+kind/logs-live:
+	export KUBECONFIG="$$(pwd)/kubeconfig.kind.$(CI_BUILD_TAG)" && \
+		./local-dev/kubectl --namespace lagoon logs -f -l app.kubernetes.io/name=lagoon-core --all-containers --max-log-requests 20 --prefix=true
+
+.PHONY: kind/logs-dump
+kind/logs-dump:
+	export KUBECONFIG="$$(pwd)/kubeconfig.kind.$(CI_BUILD_TAG)" && \
+		./local-dev/kubectl --namespace lagoon logs -l app.kubernetes.io/name=lagoon-core --all-containers --max-log-requests 20 --prefix=true --tail=-1 >> logs.txt && \
+		./local-dev/kubectl --namespace lagoon logs -l app.kubernetes.io/name=lagoon-test --all-containers --max-log-requests 20 --prefix=true --tail=-1 >> logs.txt &&
+
+.PHONY: kind/logs-stern
+kind/logs-stern:
+	export KUBECONFIG="$$(pwd)/kubeconfig.kind.$(CI_BUILD_TAG)" && \
+		./local-dev/stern --kubeconfig=./kubeconfig.kind.lagoon "^lagoon-\w" -A --timestamps >> logs2.txt
 
 .PHONY: kind/clean
 kind/clean: local-dev/kind
