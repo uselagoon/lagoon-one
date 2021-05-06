@@ -126,15 +126,6 @@ pipeline {
     }
   }
 
-def cleanup() {
-  try {
-    sh "make clean kind/clean"
-  } catch (error) {
-    echo "cleanup failed, ignoring this."
-  }
-}
-
-
 
   post {
     always {
@@ -150,6 +141,14 @@ def cleanup() {
     aborted {
       notifySlack('ABORTED')
     }
+  }
+}
+
+def cleanup() {
+  try {
+    sh "make clean kind/clean"
+  } catch (error) {
+    echo "cleanup failed, ignoring this."
   }
 }
 
