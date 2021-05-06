@@ -1171,10 +1171,10 @@ kind/logs-live:
 kind/logs-dump:
 	export KUBECONFIG="$$(pwd)/kubeconfig.kind.$(CI_BUILD_TAG)" && \
 		./local-dev/kubectl --namespace lagoon logs -l app.kubernetes.io/name=lagoon-core --all-containers --max-log-requests 20 --prefix=true --tail=-1 >> logs.txt && \
-		./local-dev/kubectl --namespace lagoon logs -l app.kubernetes.io/name=lagoon-test --all-containers --max-log-requests 20 --prefix=true --tail=-1 >> logs.txt &&
+		./local-dev/kubectl --namespace lagoon logs -l app.kubernetes.io/name=lagoon-test --all-containers --max-log-requests 20 --prefix=true --tail=-1 >> logs.txt
 
 .PHONY: kind/logs-stern
-kind/logs-stern:
+kind/logs-stern: local-dev/stern
 	export KUBECONFIG="$$(pwd)/kubeconfig.kind.$(CI_BUILD_TAG)" && \
 		./local-dev/stern --kubeconfig=./kubeconfig.kind.lagoon "^lagoon-\w" -A --timestamps >> logs2.txt
 
