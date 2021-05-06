@@ -1177,7 +1177,7 @@ kind/logs-dump:
 kind/logs-stern: local-dev/stern
 	export KUBECONFIG="$$(pwd)/kubeconfig.kind.$(CI_BUILD_TAG)" && \
 		./local-dev/stern --version && \
-		./local-dev/stern "^lagoon-\w" -A --timestamps >> logs2.txt
+		./local-dev/stern "^lagoon-\w" -A --timestamps
 
 .PHONY: kind/clean
 kind/clean: local-dev/kind

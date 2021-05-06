@@ -64,12 +64,6 @@ pipeline {
                 sh script: "make -j$NPROC kind/test BRANCH_NAME=${SAFEBRANCH_NAME}", label: "Running tests on kind cluster"
               }
             }
-            stage ('collect kubectl logs') {
-              steps {
-                sh script: "make kind/logs-dump"
-                sh script: "cat logs.txt", label: "Display kubectl logs"
-              }
-            }
             stage ('cleanup') {
               steps {
                 cleanup()
@@ -81,15 +75,13 @@ pipeline {
           steps {
             sh script: "sleep 120s"
             sh script: "make kind/logs-stern"
-            sh script: "cat logs2.txt", label: "Display stern logs"
           }
         }
       }
     }
     stage ('show logs') {
       steps {
-        sh script: "cat logs.txt", label: "Display kubectl logs"
-        sh script: "cat logs2.txt", label: "Display stern logs"
+        showlogs()
       }
     }
     stage ('push images to testlagoon/* with :latest tag') {
@@ -135,6 +127,7 @@ pipeline {
 
   post {
     always {
+      showlogs()
       cleanup()
     }
     success {
@@ -155,6 +148,15 @@ def cleanup() {
     sh "make clean kind/clean"
   } catch (error) {
     echo "cleanup failed, ignoring this."
+  }
+}
+
+def showlogs() {
+  try {
+    sh script: "cat logs.txt", label: "Display kubectl logs"
+    sh script: "cat logs2.txt", label: "Display stern logs"
+  } catch (error) {
+    echo "logs failed, ignoring this."
   }
 }
 
