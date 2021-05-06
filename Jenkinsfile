@@ -79,6 +79,7 @@ pipeline {
         }
         stage ('collect stern logs') {
           steps {
+            sh script: "sleep 120s"
             sh script: "make kind/logs-stern"
             sh script: "cat logs2.txt", label: "Display stern logs"
           }
