@@ -2,6 +2,14 @@
 
 ### Lagoon Core
 
+Requirements:
+
+* Ingress Controller installed in k8s cluster
+* Cert Manager \(if TLS expected\)
+* Storage
+  * RWO storage as default Storage Class
+* Helm Repo added
+
 ```text
 helm repo add https://uselagoon.github.io/lagoon-charts/
 ```
