@@ -11,7 +11,7 @@ Requirements:
 * Lagoon Charts Helm Repo 
 
 ```text
-helm repo add https://uselagoon.github.io/lagoon-charts/
+helm repo add lagoon https://uselagoon.github.io/lagoon-charts/
 ```
 
 example values.yaml
@@ -28,7 +28,7 @@ s3FilesHost: none
 s3FilesSecretAccessKey: none
 s3BAASAccessKeyID: none
 s3BAASSecretAccessKey: none
-imageTag: main
+imageTag: v2.0.0-alpha.9
 registry: none.com
 
 api:
@@ -152,8 +152,24 @@ webhookHandler:
 ```
 
 ```text
-helm upgrade --install --create-namespace --namespace lagoon-core lagoon-core lagoon/lagoon-core
+helm upgrade --install --create-namespace --namespace lagoon-core --values values.yaml lagoon-core lagoon/lagoon-core
 ```
+
+visit ui
+
+username: lagoonadmin
+
+password: use lagoon-core-keycloak secret 
+
+
+
+
+
+
+
+
+
+
 
 ### Lagoon Remote
 
@@ -164,17 +180,27 @@ Requirements
 example values.yaml
 
 ```text
-rabbitMQUsername: lagoon
-rabbitMQPassword: <from lagoon core>
-rabbitMQHostname: <IP from rabbitmq>
-lagoonTargetName: <cluster name>
-taskSSHHost: "ssh.main.lagoon-core.test6.amazee.io"
-taskSSHPort: "22"
-taskAPIHost: "api.main.lagoon-core.test6.amazee.io"
+lagoon-build-deploy:
+  enabled: true
+  rabbitMQUsername: lagoon
+  rabbitMQPassword: <from lagoon core>
+  rabbitMQHostname: <IP from rabbitmq>
+  lagoonTargetName: <cluster name>
+  taskSSHHost: <IP of ssh service loadbalancer>
+  taskSSHPort: "22"
+  taskAPIHost: "api.lagoon.example.com"
 
 ```
 
 ```text
-helm upgrade --install --create-namespace --namespace lagoon lagoon-remote lagoon/lagoon-remote
+helm upgrade --install --create-namespace --namespace lagoon --values values.yaml  lagoon-remote lagoon/lagoon-remote
 ```
+
+### Harbor
+
+Regular Harbor Installation
+
+{% embed url="https://github.com/goharbor/harbor-helm" %}
+
+
 
