@@ -202,5 +202,49 @@ Regular Harbor Installation
 
 {% embed url="https://github.com/goharbor/harbor-helm" %}
 
+simple example without object storage and just storage in a persistent volume
+
+```text
+helm upgrade \
+		--install \
+		--create-namespace \
+		--namespace harbor \
+		--wait \
+		--set "expose.ingress.annotations.kubernetes\.io\/tls-acme=\"true\"" \
+		--set "expose.ingress.hosts.core=harbor.lagoon.example.com" \
+		--set "externalURL=https://harbor.lagoon.example.com" \
+		--set chartmuseum.enabled=false \
+		--set clair.enabled=false \
+		--set notary.enabled=false \
+		--set trivy.enabled=true \
+		--set jobservice.jobLogger=stdout \
+		--set registry.replicas=1 \
+		--version=1.5.2 \
+		harbor \
+		harbor/harbor
+```
+
+### AddKubernetes
+
+```text
+mutation addKubernetes {
+  addKubernetes(input:
+{
+  name: "cluster1.example.com",
+  consoleUrl: "https://example.com",
+  routerPattern: "${environment}.${project}.cluster1.example.com"
+}
+  ) {
+    id
+  }
+}
+```
+
+### Lagoon cli
+
+```text
+lagoon config add --graphql https://api.lagoon.lag01.dplpoc.reload.dk/graphql --ui https://ui.lagoon.lag01.dplpoc.reload.dk --hostname 52.149.110.112 --lagoon lagoon01 --port 22
+```
+
 
 
