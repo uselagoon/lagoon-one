@@ -8,7 +8,7 @@ Requirements:
 * Cert Manager \(if TLS expected\)
 * Storage
   * RWO storage as default Storage Class
-* Helm Repo added
+* Lagoon Charts Helm Repo 
 
 ```text
 helm repo add https://uselagoon.github.io/lagoon-charts/
@@ -149,5 +149,32 @@ webhookHandler:
         hosts:
           - webhookhandler.lagoon.example.com
 
+```
+
+```text
+helm upgrade --install --create-namespace --namespace lagoon-core lagoon-core lagoon/lagoon-core
+```
+
+### Lagoon Remote
+
+Requirements
+
+
+
+example values.yaml
+
+```text
+rabbitMQUsername: lagoon
+rabbitMQPassword: <from lagoon core>
+rabbitMQHostname: <IP from rabbitmq>
+lagoonTargetName: <cluster name>
+taskSSHHost: "ssh.main.lagoon-core.test6.amazee.io"
+taskSSHPort: "22"
+taskAPIHost: "api.main.lagoon-core.test6.amazee.io"
+
+```
+
+```text
+helm upgrade --install --create-namespace --namespace lagoon lagoon-remote lagoon/lagoon-remote
 ```
 
