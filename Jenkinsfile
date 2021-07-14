@@ -1,4 +1,4 @@
-node {
+node ('lagoon-one') {
 
   openshift_version = 'v3.11.0'
   minishift_version = '1.34.1'
