@@ -1,27 +1,27 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "solr.fullname" . }}
+  name: {{ include "rabbitmq.fullname" . }}
   labels:
-    {{- include "solr.labels" . | nindent 4 }}
+    {{- include "rabbitmq.labels" . | nindent 4 }}
   annotations:
-    {{- include "solr.annotations" . | nindent 4 }}
+    {{- include "rabbitmq.annotations" . | nindent 4 }}
 spec:
   replicas: {{ .Values.replicaCount }}
   strategy:
     type: Recreate
   selector:
     matchLabels:
-      {{- include "solr.selectorLabels" . | nindent 6 }}
+      {{- include "rabbitmq.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       labels:
-        {{- include "solr.labels" . | nindent 8 }}
-        {{- include "solr.datadogLabels" . | nindent 8 }}
+        {{- include "rabbitmq.labels" . | nindent 8 }}
+        {{- include "rabbitmq.datadogLabels" . | nindent 8 }}
       annotations:
-        {{- include "solr.annotations" . | nindent 8 }}
+        {{- include "rabbitmq.annotations" . | nindent 8 }}
         k8up.syn.tools/backupcommand: /bin/sh -c 'tar -cf - -C {{ .Values.persistentStorage.path | quote }} --exclude="lost\+found" . || [ $? -eq 1 ]'
-        k8up.syn.tools/file-extension: .{{ include "solr.fullname" . }}.tar
+        k8up.syn.tools/file-extension: .{{ include "rabbitmq.fullname" . }}.tar
         lagoon.sh/configMapSha: {{ .Values.configMapSha | quote }}
     spec:
     {{- with .Values.imagePullSecrets }}
@@ -29,10 +29,10 @@ spec:
         {{- toYaml . | nindent 8 }}
     {{- end }}
       volumes:
-        - name: {{ include "solr.persistentStorageName" . }}
+        - name: {{ include "rabbitmq.persistentStorageName" . }}
           persistentVolumeClaim:
-            claimName: {{ include "solr.persistentStorageName" . }}
-      priorityClassName: {{ include "solr.lagoonPriority" . }}
+            claimName: {{ include "rabbitmq.persistentStorageName" . }}
+      priorityClassName: {{ include "rabbitmq.lagoonPriority" . }}
       enableServiceLinks: false
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
@@ -41,16 +41,18 @@ spec:
           name: {{ .Chart.Name }}
           imagePullPolicy: {{ .Values.imagePullPolicy }}
           ports:
-            - containerPort: 8983
+            - containerPort: 5672
+              protocol: TCP
+            - containerPort: 15672
               protocol: TCP
           readinessProbe:
             tcpSocket:
-              port: 8983
+              port: 5672
             initialDelaySeconds: 1
             periodSeconds: 3
           livenessProbe:
             tcpSocket:
-              port: 8983
+              port: 5672
             initialDelaySeconds: 90
             timeoutSeconds: 3
             failureThreshold: 5
@@ -60,8 +62,10 @@ spec:
           env:
             - name: CRONJOBS
               value: {{ .Values.inPodCronjobs | quote }}
+            - name: RABBITMQ_NODENAME
+              value: rabbitmq@localhost
           volumeMounts:
-            - name: {{ include "solr.persistentStorageName" . }}
+            - name: {{ include "rabbitmq.persistentStorageName" . }}
               mountPath: {{ .Values.persistentStorage.path | quote }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
