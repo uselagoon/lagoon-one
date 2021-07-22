@@ -1,3 +1,7 @@
+!!!warning
+    **Note:** This documentation relates to developing the 1.x releases of Lagoon, built from the `master` branch.
+    For documentation on the current version of Lagoon, 2.x, please visit [docs.lagoon.sh](https://docs.lagoon.sh)
+
 # PHP-CLI-Drupal
 
 The [Lagoon `php-cli-drupal` Docker image](https://github.com/amazeeio/lagoon/blob/master/images/php/cli-drupal/Dockerfile) is optimized to work with Drupal. It is based on the [Lagoon `php-cli` image](./), and has all the command line tools needed for the daily maintenance of a Drupal website:

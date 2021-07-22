@@ -1,3 +1,7 @@
+!!!warning
+    **Note:** This documentation relates to developing the 1.x releases of Lagoon, built from the `master` branch.
+    For documentation on the current version of Lagoon, 2.x, please visit [docs.lagoon.sh](https://docs.lagoon.sh)
+
 # Nginx-Drupal
 
 The [Lagoon `nginx-drupal` Docker image](https://github.com/amazeeio/lagoon/blob/master/images/nginx-drupal/Dockerfile). Optimized to work with Drupal. Based on [Lagoon `nginx` image](./).

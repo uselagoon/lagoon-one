@@ -1,3 +1,7 @@
+!!!warning
+    **Note:** This documentation relates to developing the 1.x releases of Lagoon, built from the `master` branch.
+    For documentation on the current version of Lagoon, 2.x, please visit [docs.lagoon.sh](https://docs.lagoon.sh)
+
 # Kibana Examples
 
 Have you seen [the Kibana getting started video](https://www.elastic.co/webinars/getting-started-kibana) and are now ready to work with logs? We are here to help! This page will give you examples of Kibana queries you can use. This is not a Kibana 101 class, but it can help you understand some of what you can do in Kibana.

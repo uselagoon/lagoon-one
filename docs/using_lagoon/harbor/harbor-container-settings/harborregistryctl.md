@@ -1,3 +1,7 @@
+!!!warning
+    **Note:** This documentation relates to developing the 1.x releases of Lagoon, built from the `master` branch.
+    For documentation on the current version of Lagoon, 2.x, please visit [docs.lagoon.sh](https://docs.lagoon.sh)
+
 # HarborRegistryCtl Settings
 HarborRegistryCtl requires a configuration file to start, which is located at `/etc/registryctl/config.yml` within the container. Any changes made to this config file are temporary and will not persist once the pod is restarted.
 

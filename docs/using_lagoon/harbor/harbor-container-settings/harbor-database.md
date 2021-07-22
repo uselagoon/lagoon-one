@@ -1,3 +1,7 @@
+!!!warning
+    **Note:** This documentation relates to developing the 1.x releases of Lagoon, built from the `master` branch.
+    For documentation on the current version of Lagoon, 2.x, please visit [docs.lagoon.sh](https://docs.lagoon.sh)
+
 # Harbor-Database Settings
 Harbor-Database requires specific environment variables to be set in order to start, which are stored within secrets as described in the `services/harbor-database/harbor-core.yml` file.
 

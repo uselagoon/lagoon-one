@@ -1,3 +1,7 @@
+!!!warning
+    **Note:** This documentation relates to developing the 1.x releases of Lagoon, built from the `master` branch.
+    For documentation on the current version of Lagoon, 2.x, please visit [docs.lagoon.sh](https://docs.lagoon.sh)
+
 # Build and Deploy Process
 
 This document describes what actually happens during a Lagoon build and deployment. It is heavily simplified from what actually happens, but it will help you to understand what is happening under the hood every time that Lagoon deploys new code for you.

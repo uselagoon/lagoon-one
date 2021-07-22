@@ -1,3 +1,7 @@
+!!!warning
+    **Note:** This documentation relates to developing the 1.x releases of Lagoon, built from the `master` branch.
+    For documentation on the current version of Lagoon, 2.x, please visit [docs.lagoon.sh](https://docs.lagoon.sh)
+
 # Harbor-Core Settings
 Harbor-Core requires a configuration file to start, which is located at `/etc/core/app.conf` within the container. Any changes made to this config file are temporary and will not persist once the pod is restarted.
 
@@ -141,10 +145,10 @@ The configmap from which this config file is generated is stored within Lagoon i
   * This service is **not** used with Lagoon's implementation of Harbor.
   * The default value is `false`.
 * `WITH_CLAIR`
-  * Tells harbor-core if the harborclair service is being used. 
+  * Tells harbor-core if the harborclair service is being used.
   * Lagoon **does** use this service in its implementation of Harbor.
   * The default value is `true`.
 * `WITH_NOTARY`
-  * Tells harbor-core if the Notary service is being used. 
+  * Tells harbor-core if the Notary service is being used.
   * This service is **not** used with Lagoon's implementation of Harbor.
   * The default value is `false`.

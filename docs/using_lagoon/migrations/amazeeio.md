@@ -1,3 +1,7 @@
+!!!warning
+    **Note:** This documentation relates to developing the 1.x releases of Lagoon, built from the `master` branch.
+    For documentation on the current version of Lagoon, 2.x, please visit [docs.lagoon.sh](https://docs.lagoon.sh)
+
 # Migrations from Amazee.io
 
 If you are migrating from the amazee.io legacy infrastructure over to Lagoon, you will notice that everything is very familiar. In the end, the same brains are behind both projects. There are some changes, however, and this documentation will explain each of them.

@@ -1,3 +1,7 @@
+!!!warning
+    **Note:** This documentation relates to developing the 1.x releases of Lagoon, built from the `master` branch.
+    For documentation on the current version of Lagoon, 2.x, please visit [docs.lagoon.sh](https://docs.lagoon.sh)
+
 # Solr
 
 The [Lagoon `Solr` image Dockerfile](https://github.com/amazeeio/lagoon/blob/master/images/solr/Dockerfile). Based on the official [`solr:<version>-alpine` images](https://hub.docker.com/_/solr).

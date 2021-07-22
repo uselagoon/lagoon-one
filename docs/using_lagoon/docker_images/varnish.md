@@ -1,3 +1,7 @@
+!!!warning
+    **Note:** This documentation relates to developing the 1.x releases of Lagoon, built from the `master` branch.
+    For documentation on the current version of Lagoon, 2.x, please visit [docs.lagoon.sh](https://docs.lagoon.sh)
+
 # Varnish
 
 The [Lagoon `Varnish` image Dockerfile](https://github.com/amazeeio/lagoon/blob/master/images/varnish/Dockerfile). Based on the [official `varnish` package](https://hub.docker.com/_/varnish) provided by `alpine:3.7` image.

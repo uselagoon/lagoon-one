@@ -1,3 +1,7 @@
+!!!warning
+    **Note:** This documentation relates to developing the 1.x releases of Lagoon, built from the `master` branch.
+    For documentation on the current version of Lagoon, 2.x, please visit [docs.lagoon.sh](https://docs.lagoon.sh)
+
 # RabbitMQ
 
 The [Lagoon RabbitMQ Dockerfile](https://github.com/amazeeio/lagoon/tree/master/images/rabbitmq) with management plugin installed. Based on the official `rabbitmq:3-management` image at [docker-hub](https://hub.docker.com/_/rabbitmq).

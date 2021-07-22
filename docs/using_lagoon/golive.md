@@ -1,3 +1,7 @@
+!!!warning
+    **Note:** This documentation relates to developing the 1.x releases of Lagoon, built from the `master` branch.
+    For documentation on the current version of Lagoon, 2.x, please visit [docs.lagoon.sh](https://docs.lagoon.sh)
+
 # Going Live
 
 Congratulations, you're _this_ close to going live with your website on Lagoon! In order to make this as seamless as possible, we've got this final checklist for you. It leads you through the last few things you should check before taking your site live.

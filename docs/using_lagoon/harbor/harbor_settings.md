@@ -1,8 +1,12 @@
+!!!warning
+    **Note:** This documentation relates to developing the 1.x releases of Lagoon, built from the `master` branch.
+    For documentation on the current version of Lagoon, 2.x, please visit [docs.lagoon.sh](https://docs.lagoon.sh)
+
 # Running Harbor Locally
 Lagoon supports running Harbor locally, and it is automatically used for hosting all Kubernetes-based builds (any time the project's `activeSystemsDeploy` value is set to `lagoon_kubernetesBuildDeploy`). When Harbor is ran locally, it makes use of MinIO as a storage backend, which is an AWS S3 compatible local storage solution.
 
 # Settings
-Harbor is composed of multiple containers, which all require different settings in order for them to run successfully. 
+Harbor is composed of multiple containers, which all require different settings in order for them to run successfully.
 
 ## Environment Variables
 The following environment variables are required to be set in order for Harbor to properly start:

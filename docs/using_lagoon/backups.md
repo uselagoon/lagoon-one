@@ -1,3 +1,7 @@
+!!!warning
+    **Note:** This documentation relates to developing the 1.x releases of Lagoon, built from the `master` branch.
+    For documentation on the current version of Lagoon, 2.x, please visit [docs.lagoon.sh](https://docs.lagoon.sh)
+
 # Backups
 
 Lagoon makes use of the [k8up operator](https://github.com/vshn/k8up) to provide backup functionality for both database data as well as containers' persistent storage volumes. This operator utilizes [Restic](https://github.com/restic/restic) to catalog these backups, which is typically connected to an AWS S3 bucket to provide secure, off-site storage for the generated backups.

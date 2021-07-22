@@ -1,3 +1,7 @@
+!!!warning
+    **Note:** This documentation relates to developing the 1.x releases of Lagoon, built from the `master` branch.
+    For documentation on the current version of Lagoon, 2.x, please visit [docs.lagoon.sh](https://docs.lagoon.sh)
+
 # Workflows
 
 Lagoon tries to support any development workflow possible. It specifically does not enforce any workflows onto teams, so that each development team can define how they would like to develop and deploy their code.
