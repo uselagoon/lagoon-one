@@ -1,6 +1,5 @@
 !!!warning
-    **Note:** This documentation relates to developing the 1.x releases of Lagoon, built from the `master` branch.
-    For documentation on the current version of Lagoon, 2.x, please visit [docs.lagoon.sh](https://docs.lagoon.sh)
+    **Note:** This documentation is no longer current. The documentation is now at [docs.lagoon.sh](https://docs.lagoon.sh)
 
 ![The Lagoon logo is a blue hexagon split in two pieces with an L-shaped cut](/images/lagoon-logo.png)
 <br />
@@ -9,9 +8,7 @@
 
 Lagoon solves what developers are dreaming about: A system that allows developers to locally develop their code and their services with Docker and run the exact same system in production. The same Docker images, the same service configurations and the same code.
 
-!!!warning
-    **Note:** This documentation relates to the 1.x releases of Lagoon, built from the `master` branch, and is only maintained as required.
-    For the maintained documentation, please visit [docs.lagoon.sh](https://docs.lagoon.sh)
+    **Note:** This documentation is no longer current. The documentation is now at [docs.lagoon.sh](https://docs.lagoon.sh)
 
 ## Who are you?
 

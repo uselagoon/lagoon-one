@@ -1,6 +1,5 @@
 !!!warning
-    **Note:** This documentation relates to developing the 1.x releases of Lagoon, built from the `master` branch.
-    For documentation on the current version of Lagoon, 2.x, please visit [docs.lagoon.sh](https://docs.lagoon.sh)
+    **Note:** This documentation is no longer current. The documentation is now at [docs.lagoon.sh](https://docs.lagoon.sh)
 
 # Cipher Support
 >_A cipher suite is a set of algorithms that help secure a network connection that uses Transport Layer Security (TLS) or its now-deprecated predecessor Secure Socket Layer (SSL). The set of algorithms that cipher suites usually contain include: a key exchange algorithm, a bulk encryption algorithm, and a message authentication code (MAC) algorithm._
